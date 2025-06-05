@@ -1,0 +1,4 @@
+vimbapython
+numpy
+scipy
+matplotlib
