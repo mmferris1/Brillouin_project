@@ -52,3 +52,16 @@ class ZaberHumanInterface(BaseZaberHumanInterface):
             which_axis: 'x', 'y', 'z'
         """
         self.axis_map[which_axis].set_unit(unit)
+
+    def get_position(self):
+        pos_x = self.x_axis.get_position(Units.LENGTH_MICROMETRES)
+        pos_y = self.y_axis.get_position(Units.LENGTH_MICROMETRES)
+        pos_z = self.z_axis.get_position(Units.LENGTH_MICROMETRES)
+
+        pos = {
+            'x': pos_x,
+            'y': pos_y,
+            'z': pos_z
+        }
+        print(f"[Zaber] Current position (µm): X={pos_x:.2f}, Y={pos_y:.2f}, Z={pos_z:.2f} µm")
+        return pos

@@ -61,5 +61,5 @@ class BaseZaberHumanInterface(ABC):
         pass
 
     def get_position(self):
-        """ change units for motor movement"""
+        """ get x,y,z coordinates of a position"""
         pass
