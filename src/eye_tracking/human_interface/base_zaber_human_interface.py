@@ -4,45 +4,53 @@ import numpy as np
 class BaseZaberHumanInterface(ABC):
 
     @abstractmethod
-
     def get_name(self) -> str:
         """ Get the motor name or type """
         pass
 
-    def updown_rel(self):
+    @abstractmethod
+    def updown_rel(self, delta_um):
         """ Move (?) motor up and down """
         pass
 
-    def leftright_rel(self):
+    @abstractmethod
+    def leftright_rel(self, delta_um):
         """ Move (?) motor to the left and right"""
         pass
 
-    def forwardbackward_rel(self):
+    @abstractmethod
+    def forwardbackward_rel(self, delta_um):
         """ Move (?) motor forward and backward """
         pass
 
-    def updown_abs(self):
+    @abstractmethod
+    def updown_abs(self, position_um: float):
         """ Move (?) motor up """
         pass
 
-    def leftright_abs(self):
+    @abstractmethod
+    def leftright_abs(self, position_um: float):
         """ Move (?) motor to the left """
         pass
 
-    def forwardbackwards_abs(self):
+    @abstractmethod
+    def forwardbackwards_abs(self, position_um: float):
         """ Move (?) motor forward and backwards"""
         pass
 
-    def change_units(self):
-        """ change units for motor movement"""
-        pass
+    #def change_units(self):
+        #""" change units for motor movement"""
+        #pass
 
+    @abstractmethod
     def get_position(self):
         """ get x,y,z coordinates of a position"""
         pass
 
+    @abstractmethod
     def set_speed(self):
         pass
 
+    @abstractmethod
     def set_acceleration(self):
         pass

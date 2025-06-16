@@ -1,17 +1,18 @@
 from zaber_motion import Library, Units
 from zaber_motion.ascii import Connection
 from src.eye_tracking.human_interface.base_zaber_human_interface import BaseZaberHumanInterface
+from src.my_dataclasses.human_interface_position import ZaberPosition
 
-class ZaberHumanInterface(BaseZaberHumanInterface):
-    def __init__(self, port="COM5", axis_index=1):
+class ZaberHumanInterface():
+    def __init__(self, port="COM6", axis_index=1):
         Library.enable_device_db_store()
         self.connection = Connection.open_serial_port(port)
         devices = self.connection.detect_devices()
         if not devices:
             raise RuntimeError("No Zaber devices found.")
-        self.x_axis = devices[0].get_axis(axis_index)
-        self.y_axis = devices[1].get_axis(axis_index)
-        self.z_axis = devices[2].get_axis(axis_index)
+        self.x_axis = devices[1].get_axis(axis_index)
+        self.y_axis = devices[2].get_axis(axis_index)
+        self.z_axis = devices[0].get_axis(axis_index)
 
         self.axis_map = {
             'x': self.x_axis,
@@ -69,3 +70,8 @@ class ZaberHumanInterface(BaseZaberHumanInterface):
         }
         print(f"[Zaber] Current position (µm): X={pos_x:.2f}, Y={pos_y:.2f}, Z={pos_z:.2f} µm")
         return pos
+
+    def get_position_class(self) -> ZaberPosition:
+        return ZaberPosition(x=self.get_position('x'), y=self.get_position('y'), z=self.get_position('z'))
+
+    #def get_position_class(self) -> ZaberPosition:
