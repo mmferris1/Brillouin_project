@@ -9,51 +9,28 @@ class BaseZaberHumanInterface(ABC):
         """ Get the motor name or type """
         pass
 
-    def up_rel(self):
+    def updown_rel(self):
+        """ Move (?) motor up and down """
+        pass
+
+    def leftright_rel(self):
+        """ Move (?) motor to the left and right"""
+        pass
+
+    def forwardbackward_rel(self):
+        """ Move (?) motor forward and backward """
+        pass
+
+    def updown_abs(self):
         """ Move (?) motor up """
         pass
 
-    def down_rel(self):
-        """ Move (?) motor down """
-        pass
-
-    def left_rel(self):
+    def leftright_abs(self):
         """ Move (?) motor to the left """
         pass
 
-    def right_rel(self):
-        """ Move (?) motor to the right """
-        pass
-
-    def forward_rel(self):
-        """ Move (?) motor forward """
-        pass
-
-    def back_rel(self):
-        """ Move (?) motor backwards """
-        pass
-    def up_abs(self):
-        """ Move (?) motor up """
-        pass
-
-    def down_abs(self):
-        """ Move (?) motor down """
-        pass
-
-    def left_abs(self):
-        """ Move (?) motor to the left """
-        pass
-
-    def right_abs(self):
-        """ Move (?) motor to the right """
-        pass
-
-    def forward_abs(self):
-        """ Move (?) motor forward """
-        pass
-
-    def back_abs(self):
-        """ Move (?) motor backwards """
+    def forwardbackwards_abs(self):
+        """ Move (?) motor forward and backwards"""
         pass
 
     def change_units(self):
@@ -62,4 +39,10 @@ class BaseZaberHumanInterface(ABC):
 
     def get_position(self):
         """ get x,y,z coordinates of a position"""
+        pass
+
+    def set_speed(self):
+        pass
+
+    def set_acceleration(self):
         pass
