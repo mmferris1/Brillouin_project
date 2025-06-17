@@ -1,5 +1,5 @@
 from zaber_motion.units import Units
-from src.eye_tracking.human_interface.zabar_human_interface import ZaberHumanInterface
+from src.eye_tracking.human_interface.zaber_human_interface import ZaberHumanInterface
 import time
 
 

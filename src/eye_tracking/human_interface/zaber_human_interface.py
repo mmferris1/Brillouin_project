@@ -1,7 +1,7 @@
 from zaber_motion import Library, Units
 from zaber_motion.ascii import Connection
 from src.eye_tracking.human_interface.base_zaber_human_interface import BaseZaberHumanInterface
-from src.my_dataclasses.human_interface_position import ZaberPosition
+#from src.my_dataclasses.human_interface_position import ZaberPosition
 
 class ZaberHumanInterface():
     def __init__(self, port="COM6", axis_index=1):
@@ -41,7 +41,7 @@ class ZaberHumanInterface():
         self.x_axis.move_relative(delta_um, Units.LENGTH_MICROMETRES)
         self.x_axis.wait_until_idle()
 
-    def forwardbackward_rel(self, delta_um):
+    def forwardbackwards_rel(self, delta_um):
         self.z_axis.move_relative(delta_um, Units.LENGTH_MICROMETRES)
         self.z_axis.wait_until_idle()
 
@@ -71,7 +71,7 @@ class ZaberHumanInterface():
         print(f"[Zaber] Current position (µm): X={pos_x:.2f}, Y={pos_y:.2f}, Z={pos_z:.2f} µm")
         return pos
 
-    def get_position_class(self) -> ZaberPosition:
-        return ZaberPosition(x=self.get_position('x'), y=self.get_position('y'), z=self.get_position('z'))
+    #def get_position_class(self) -> ZaberPosition:
+        #return ZaberPosition(x=self.get_position('x'), y=self.get_position('y'), z=self.get_position('z'))
 
     #def get_position_class(self) -> ZaberPosition:
