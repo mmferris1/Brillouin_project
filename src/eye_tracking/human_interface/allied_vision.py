@@ -1,6 +1,6 @@
 from vimba import Vimba, VimbaFeatureError
 import numpy as np
-from .base_mako import BaseMakoCamera
+#from .base_mako import BaseMakoCamera
 
 class AlliedVisionCamera():
     def __init__(self):

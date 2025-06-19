@@ -5,7 +5,7 @@ from src.eye_tracking.human_interface.base_zaber_human_interface import BaseZabe
 from src.eye_tracking.human_interface.zaber_human_interface_dummy import ZaberHumanInterfaceDummy
 from src.eye_tracking.pupil_detection_laser_focus import PupilDetection
 from src.eye_tracking.human_interface.dummy_allied_vision import DummyMakoCamera
-from src.eye_tracking.human_interface.allied_vision import AlliedVisionCamera
+#from src.eye_tracking.human_interface.allied_vision import AlliedVisionCamera
 
 import cv2
 from PyQt5.QtGui import QPixmap, QDoubleValidator, QImage
@@ -34,28 +34,11 @@ class HumanInterfaceManager:
         self.camera.set_acquisition_mode("Continuous")
         self.camera.start_stream(self._on_new_frame)
 
-    # def update_frame(self, image: np.ndarray, radius_guess: float = 50.0):
-    #     self.last_image = image
-    #     result = self.pupil_detector.DetectPupil(image, radius_guess)
-    #     if result:
-    #         drawing, center, ellipse, radius = result
-    #         self.pupil_center = center
-    #         self.ellipse = ellipse
-    #         self.pupil_radius = radius
-    #         return drawing
-    #     return image
-    #
-    # def get_overlay_image(self):
-    #     if self.last_image is None:
-    #         return None
-    #     image = self.update_frame(self.last_image)
-    #     from PyQt5.QtGui import QImage, QPixmap
-    #     height, width, channel = image.shape
-    #     bytes_per_line = 3 * width
-    #     qimage = QImage(image.data, width, height, bytes_per_line, QImage.Format_RGB888)
-    #     return QPixmap.fromImage(qimage)
+        self.laser_distance = None  # <-- New attribute
 
-#updated other version
+    def set_laser_distance(self, distance_um: float):
+        self.laser_distance = distance_um
+
     def _on_new_frame(self, frame):
         self.latest_frame = frame
 
@@ -63,11 +46,24 @@ class HumanInterfaceManager:
         if self.latest_frame is None:
             return None
 
-        rgb_image = cv2.cvtColor(self.latest_frame, cv2.COLOR_GRAY2RGB)
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-        q_img = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
-        return QPixmap.fromImage(q_img)
+        result = self.pupil_detector.DetectPupil(
+            self.latest_frame,
+            radiusGuess=50,  # You may want to expose this as a setting
+            laser_distance=self.laser_distance  # Now passed from GUI
+        )
+
+        if result:
+            drawing, center, ellipse, radius = result
+            self.pupil_center = center
+            self.ellipse = ellipse
+            self.pupil_radius = radius
+
+            rgb_image = cv2.cvtColor(drawing, cv2.COLOR_BGR2RGB)
+            h, w, ch = rgb_image.shape
+            bytes_per_line = ch * w
+            q_img = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
+            return QPixmap.fromImage(q_img)
+        return None
 
     def get_pupil_coords(self):
         return self.pupil_center
@@ -106,3 +102,33 @@ class HumanInterfaceManager:
             'pupil_radius': self.pupil_radius,
             'motor_position': self.get_motor_position()
         }
+
+    def set_exposure(self, exposure_us: float):
+        self.camera.set_exposure(exposure_us)
+
+    def set_gain(self, gain: float):
+        self.camera.set_gain(gain)
+
+    def set_frame_rate(self, fps: float):
+        self.camera.set_frame_rate(fps)
+
+    def set_roi(self, x: int, y: int, width: int, height: int):
+        self.camera.set_roi(x, y, width, height)
+
+    def get_camera_settings(self):
+        return {
+            "exposure": self.camera.get_exposure(),
+            "gain": self.camera.get_gain(),
+            "frame_rate": self.camera.get_frame_rate(),
+            "roi": self.camera.get_roi(),  # should return (x, y, width, height)
+        }
+
+    def start_camera_stream(self):
+        self.camera.start_stream(self._on_new_frame)
+
+    def stop_camera_stream(self):
+        self.camera.stop_stream()
+
+    def snap_camera_image(self):
+        frame = self.camera.snap()
+        self.latest_frame = frame
