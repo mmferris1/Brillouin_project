@@ -2,8 +2,6 @@ from PyQt5.QtCore import pyqtSignal, QObject
 from PyQt5.QtGui import QPixmap
 from src.eye_tracking.human_interface.human_interface_manager import HumanInterfaceManager
 
-
-
 class HumanInterfaceSignaller(QObject):
     image_ready = pyqtSignal(QPixmap)
     pupil_laser_coords_ready = pyqtSignal(tuple, tuple)

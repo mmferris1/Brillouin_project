@@ -14,8 +14,9 @@ class HumanInterfaceViewer(QWidget):
         super().__init__()
 
         self.setWindowTitle("Human Interface GUI")
-        self.manager = HumanInterfaceManager()
-        self.signaller = HumanInterfaceSignaller(self.manager)
+        manager = HumanInterfaceManager()
+        self.signaller = HumanInterfaceSignaller(manager)
+
 
         self.init_ui()
         self.connect_signals()
@@ -35,7 +36,7 @@ class HumanInterfaceViewer(QWidget):
         # === Left side: Image + Coordinates ===
         left_column = QVBoxLayout()
         self.image_label = QLabel("Image here")
-        self.image_label.setFixedSize(320, 240)
+        self.image_label.setFixedSize(420, 340)
         self.image_label.setStyleSheet("background-color: black;")
         left_column.addWidget(self.image_label)
         left_column.addWidget(self.create_coords_group())
@@ -60,7 +61,7 @@ class HumanInterfaceViewer(QWidget):
         self.exposure_input = QLineEdit("10000")
         self.exposure_input.setValidator(QDoubleValidator(1.0, 1000000.0, 0))
         exposure_btn = QPushButton("Set Exposure (µs)")
-        exposure_btn.clicked.connect(lambda: self.manager.set_exposure(float(self.exposure_input.text())))
+        exposure_btn.clicked.connect(lambda: self.signaller.manager.set_exposure(float(self.exposure_input.text())))
         layout.addRow("Exposure (µs):", self.exposure_input)
         layout.addRow(exposure_btn)
 
@@ -68,7 +69,7 @@ class HumanInterfaceViewer(QWidget):
         self.gain_input = QLineEdit("10.0")
         self.gain_input.setValidator(QDoubleValidator(0.0, 100.0, 2))
         gain_btn = QPushButton("Set Gain")
-        gain_btn.clicked.connect(lambda: self.manager.set_gain(float(self.gain_input.text())))
+        gain_btn.clicked.connect(lambda: self.signaller.manager.set_gain(float(self.gain_input.text())))
         layout.addRow("Gain:", self.gain_input)
         layout.addRow(gain_btn)
 
@@ -76,7 +77,7 @@ class HumanInterfaceViewer(QWidget):
         self.fps_input = QLineEdit("10.0")
         self.fps_input.setValidator(QDoubleValidator(0.1, 1000.0, 1))
         fps_btn = QPushButton("Set Frame Rate (FPS)")
-        fps_btn.clicked.connect(lambda: self.manager.set_frame_rate(float(self.fps_input.text())))
+        fps_btn.clicked.connect(lambda: self.signaller.manager.set_frame_rate(float(self.fps_input.text())))
         layout.addRow("Frame Rate (fps):", self.fps_input)
         layout.addRow(fps_btn)
 
@@ -113,7 +114,7 @@ class HumanInterfaceViewer(QWidget):
             y = int(self.roi_y_input.text())
             w = int(self.roi_w_input.text())
             h = int(self.roi_h_input.text())
-            self.manager.set_roi(x, y, w, h)
+            self.signaller.manager.set_roi(x, y, w, h)
         except ValueError:
             print("Invalid ROI input")
 
@@ -154,7 +155,7 @@ class HumanInterfaceViewer(QWidget):
     def set_laser_distance(self):
         try:
             distance = float(self.laser_input.text())
-            self.manager.set_laser_distance(distance)
+            self.signaller.manager.set_laser_distance(distance)
         except ValueError:
             print("Invalid laser distance input.")
 
@@ -220,7 +221,13 @@ class HumanInterfaceViewer(QWidget):
         return group
 
     def update_image_display(self, pixmap: QPixmap):
-        self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), Qt.KeepAspectRatio))
+        try:
+            if pixmap and not pixmap.isNull():
+                self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), Qt.KeepAspectRatio))
+            else:
+                print("[Warning] Received null or invalid pixmap.")
+        except Exception as e:
+            print(f"[ERROR] Failed to update image display: {e}")
 
     def update_coords(self, pupil: tuple, laser: tuple):
         self.pupil_label.setText(f"Pupil: {pupil}")

@@ -2,3 +2,5 @@ vimbapython
 numpy
 scipy
 matplotlib
+PyQt5
+cv2

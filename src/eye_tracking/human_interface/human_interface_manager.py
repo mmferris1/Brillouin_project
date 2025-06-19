@@ -1,18 +1,18 @@
 import numpy as np
-
+import cv2
 from src.eye_tracking.human_interface.zaber_human_interface import ZaberHumanInterface
 from src.eye_tracking.human_interface.base_zaber_human_interface import BaseZaberHumanInterface
 from src.eye_tracking.human_interface.zaber_human_interface_dummy import ZaberHumanInterfaceDummy
 from src.eye_tracking.pupil_detection_laser_focus import PupilDetection
 from src.eye_tracking.human_interface.dummy_allied_vision import DummyMakoCamera
-#from src.eye_tracking.human_interface.allied_vision import AlliedVisionCamera
+from src.eye_tracking.human_interface.allied_vision import AlliedVisionCamera
 
-import cv2
 from PyQt5.QtGui import QPixmap, QDoubleValidator, QImage
+from PyQt5.QtCore import QMutex
 
 
 class HumanInterfaceManager:
-    def __init__(self, use_dummy=True):
+    def __init__(self, use_dummy=False):
         if use_dummy:
             from src.eye_tracking.human_interface.zaber_human_interface_dummy import ZaberHumanInterfaceDummy as Zaber
         else:
@@ -25,7 +25,7 @@ class HumanInterfaceManager:
         self.pupil_radius = float('nan')
         self.ellipse = None
 
-        self.camera = DummyMakoCamera()
+        self.camera = AlliedVisionCamera()
         self.latest_frame = None
 
         self.camera.set_roi(0, 0, 640, 480)
@@ -34,35 +34,54 @@ class HumanInterfaceManager:
         self.camera.set_acquisition_mode("Continuous")
         self.camera.start_stream(self._on_new_frame)
 
-        self.laser_distance = None  # <-- New attribute
+        self.laser_distance = None
+
+        self.frame_mutex = QMutex()
 
     def set_laser_distance(self, distance_um: float):
         self.laser_distance = distance_um
 
     def _on_new_frame(self, frame):
+        self.frame_mutex.lock()
         self.latest_frame = frame
+        self.frame_mutex.unlock()
 
+    # def get_overlay_image(self):
+    #     import numpy as np
+    #     dummy = np.zeros((480, 640, 3), dtype=np.uint8)
+    #     rgb_image = cv2.cvtColor(dummy, cv2.COLOR_BGR2RGB)
+    #     h, w, ch = rgb_image.shape
+    #     bytes_per_line = ch * w
+    #     q_img = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
+    #     return QPixmap.fromImage(q_img)
     def get_overlay_image(self):
-        if self.latest_frame is None:
+        self.frame_mutex.lock()
+        frame_copy = None if self.latest_frame is None else self.latest_frame.copy()
+        self.frame_mutex.unlock()
+
+        if frame_copy is None:
             return None
 
-        result = self.pupil_detector.DetectPupil(
-            self.latest_frame,
-            radiusGuess=50,  # You may want to expose this as a setting
-            laser_distance=self.laser_distance  # Now passed from GUI
-        )
+        try:
+            result = self.pupil_detector.DetectPupil(
+                frame_copy,
+                radiusGuess=50,
+                laser_distance=self.laser_distance
+            )
 
-        if result:
-            drawing, center, ellipse, radius = result
-            self.pupil_center = center
-            self.ellipse = ellipse
-            self.pupil_radius = radius
+            if result:
+                drawing, center, ellipse, radius = result
+                self.pupil_center = center
+                self.ellipse = ellipse
+                self.pupil_radius = radius
 
-            rgb_image = cv2.cvtColor(drawing, cv2.COLOR_BGR2RGB)
-            h, w, ch = rgb_image.shape
-            bytes_per_line = ch * w
-            q_img = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
-            return QPixmap.fromImage(q_img)
+                rgb_image = cv2.cvtColor(drawing, cv2.COLOR_BGR2RGB)
+                h, w, ch = rgb_image.shape
+                bytes_per_line = ch * w
+                q_img = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
+                return QPixmap.fromImage(q_img)
+        except Exception as e:
+            print(f"[ERROR] get_overlay_image failed: {e}")
         return None
 
     def get_pupil_coords(self):
