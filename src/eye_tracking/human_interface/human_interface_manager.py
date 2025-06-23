@@ -6,13 +6,14 @@ from src.eye_tracking.human_interface.zaber_human_interface_dummy import ZaberHu
 from src.eye_tracking.pupil_detection_laser_focus import PupilDetection
 from src.eye_tracking.human_interface.dummy_allied_vision import DummyMakoCamera
 from src.eye_tracking.human_interface.allied_vision import AlliedVisionCamera
+from src.eye_tracking.laser_focus_visualizer import LaserFocusVisualizer
 
 from PyQt5.QtGui import QPixmap, QDoubleValidator, QImage
 from PyQt5.QtCore import QMutex
 
 
 class HumanInterfaceManager:
-    def __init__(self, use_dummy=False):
+    def __init__(self, use_dummy=True):
         if use_dummy:
             from src.eye_tracking.human_interface.zaber_human_interface_dummy import ZaberHumanInterfaceDummy as Zaber
         else:
@@ -25,6 +26,7 @@ class HumanInterfaceManager:
         self.pupil_radius = float('nan')
         self.ellipse = None
 
+        #DummyMakoCamera or #AlliedVisionCamera
         self.camera = AlliedVisionCamera()
         self.latest_frame = None
 
@@ -35,8 +37,10 @@ class HumanInterfaceManager:
         self.camera.start_stream(self._on_new_frame)
 
         self.laser_distance = None
+        self.laser_visualizer = LaserFocusVisualizer()
 
         self.frame_mutex = QMutex()
+
 
     def set_laser_distance(self, distance_um: float):
         self.laser_distance = distance_um
@@ -46,18 +50,13 @@ class HumanInterfaceManager:
         self.latest_frame = frame
         self.frame_mutex.unlock()
 
-    # def get_overlay_image(self):
-    #     import numpy as np
-    #     dummy = np.zeros((480, 640, 3), dtype=np.uint8)
-    #     rgb_image = cv2.cvtColor(dummy, cv2.COLOR_BGR2RGB)
-    #     h, w, ch = rgb_image.shape
-    #     bytes_per_line = ch * w
-    #     q_img = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
-    #     return QPixmap.fromImage(q_img)
     def get_overlay_image(self):
         self.frame_mutex.lock()
         frame_copy = None if self.latest_frame is None else self.latest_frame.copy()
         self.frame_mutex.unlock()
+
+        if self.laser_distance is not None:
+            frame_copy = self.laser_visualizer.draw_laser_marker(frame_copy, self.laser_distance)
 
         if frame_copy is None:
             return None
@@ -66,8 +65,7 @@ class HumanInterfaceManager:
             result = self.pupil_detector.DetectPupil(
                 frame_copy,
                 radiusGuess=50,
-                laser_distance=self.laser_distance
-            )
+                )
 
             if result:
                 drawing, center, ellipse, radius = result
@@ -86,10 +84,6 @@ class HumanInterfaceManager:
 
     def get_pupil_coords(self):
         return self.pupil_center
-
-    def get_laser_coords(self):
-        # TODO: Replace with actual laser detection logic
-        return (100, 100)
 
     def get_motor_position(self, axis: str = None):
         pos = self.motor_interface.get_position()
@@ -121,6 +115,11 @@ class HumanInterfaceManager:
             'pupil_radius': self.pupil_radius,
             'motor_position': self.get_motor_position()
         }
+
+    def get_laser_coords(self):
+        if self.laser_distance is None:
+            return (np.nan, np.nan)
+        return self.laser_visualizer.get_laser_pixel(self.laser_distance)
 
     def set_exposure(self, exposure_us: float):
         self.camera.set_exposure(exposure_us)

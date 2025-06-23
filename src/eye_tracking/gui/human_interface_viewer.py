@@ -17,7 +17,6 @@ class HumanInterfaceViewer(QWidget):
         manager = HumanInterfaceManager()
         self.signaller = HumanInterfaceSignaller(manager)
 
-
         self.init_ui()
         self.connect_signals()
 
@@ -33,7 +32,7 @@ class HumanInterfaceViewer(QWidget):
         main_layout = QHBoxLayout()
         self.setLayout(main_layout)
 
-        # === Left side: Image + Coordinates ===
+        # Left side: Image + Coordinates
         left_column = QVBoxLayout()
         self.image_label = QLabel("Image here")
         self.image_label.setFixedSize(420, 340)
@@ -41,7 +40,7 @@ class HumanInterfaceViewer(QWidget):
         left_column.addWidget(self.image_label)
         left_column.addWidget(self.create_coords_group())
 
-        # === Right side: Controls ===
+        # Right side: Controls
         right_column = QVBoxLayout()
         right_column.addWidget(self.create_motor_group())
         right_column.addWidget(self.create_laser_distance_group())
@@ -49,7 +48,7 @@ class HumanInterfaceViewer(QWidget):
         right_column.addWidget(self.create_camera_controls())
         right_column.addStretch()
 
-        # === Combine Left and Right ===
+        # Combine Left and Right
         main_layout.addLayout(left_column)
         main_layout.addLayout(right_column)
 
@@ -86,8 +85,10 @@ class HumanInterfaceViewer(QWidget):
         self.roi_y_input = QLineEdit("0")
         self.roi_w_input = QLineEdit("640")
         self.roi_h_input = QLineEdit("480")
-        for field in [self.roi_x_input, self.roi_y_input, self.roi_w_input, self.roi_h_input]:
-            field.setValidator(QDoubleValidator(0, 10000, 0))
+        self.roi_x_input.setValidator(QDoubleValidator(0, 639, 0))
+        self.roi_y_input.setValidator(QDoubleValidator(0, 479, 0))
+        self.roi_w_input.setValidator(QDoubleValidator(1, 640, 0))
+        self.roi_h_input.setValidator(QDoubleValidator(1, 480, 0))
 
         roi_btn = QPushButton("Set ROI")
         roi_btn.clicked.connect(self.set_roi_from_inputs)
