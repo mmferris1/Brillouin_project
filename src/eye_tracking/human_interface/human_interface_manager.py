@@ -13,7 +13,7 @@ from PyQt5.QtCore import QMutex
 
 
 class HumanInterfaceManager:
-    def __init__(self, use_dummy=True):
+    def __init__(self, use_dummy=False):
         if use_dummy:
             from src.eye_tracking.human_interface.zaber_human_interface_dummy import ZaberHumanInterfaceDummy as Zaber
         else:
@@ -30,7 +30,7 @@ class HumanInterfaceManager:
         self.camera = AlliedVisionCamera()
         self.latest_frame = None
 
-        self.camera.set_roi(0, 0, 640, 480)
+        self.camera.set_roi(0, 0, 2048, 2048)
         self.camera.set_exposure(10000)
         self.camera.set_gain(10.0)
         self.camera.set_acquisition_mode("Continuous")

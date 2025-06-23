@@ -35,7 +35,7 @@ class HumanInterfaceViewer(QWidget):
         # Left side: Image + Coordinates
         left_column = QVBoxLayout()
         self.image_label = QLabel("Image here")
-        self.image_label.setFixedSize(420, 340)
+        self.image_label.setFixedSize(640, 640)
         self.image_label.setStyleSheet("background-color: black;")
         left_column.addWidget(self.image_label)
         left_column.addWidget(self.create_coords_group())
