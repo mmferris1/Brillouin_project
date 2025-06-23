@@ -13,7 +13,7 @@ from PyQt5.QtCore import QMutex
 
 
 class HumanInterfaceManager:
-    def __init__(self, use_dummy=False):
+    def __init__(self, use_dummy=True):
         if use_dummy:
             from src.eye_tracking.human_interface.zaber_human_interface_dummy import ZaberHumanInterfaceDummy as Zaber
         else:
@@ -30,7 +30,7 @@ class HumanInterfaceManager:
         self.camera = AlliedVisionCamera()
         self.latest_frame = None
 
-        self.camera.set_roi(0, 0, 2048, 2048)
+        self.camera.set_roi(0, 0, 640, 480)
         self.camera.set_exposure(10000)
         self.camera.set_gain(10.0)
         self.camera.set_acquisition_mode("Continuous")
@@ -55,17 +55,28 @@ class HumanInterfaceManager:
         frame_copy = None if self.latest_frame is None else self.latest_frame.copy()
         self.frame_mutex.unlock()
 
-        if self.laser_distance is not None:
-            frame_copy = self.laser_visualizer.draw_laser_marker(frame_copy, self.laser_distance)
-
         if frame_copy is None:
+            print("[DEBUG] No frame to draw on. Skipping overlay.")
             return None
+
+        print(f"[DEBUG] Laser distance: {self.laser_distance}")
+
+        # Optional: Save a copy before laser drawing
+        if self.laser_distance is not None:
+            try:
+                frame_with_laser = self.laser_visualizer.draw_laser_marker(frame_copy, self.laser_distance)
+                frame_copy = frame_with_laser
+                print("[DEBUG] Laser marker drawn.")
+            except Exception as e:
+                print(f"[ERROR] Failed to draw laser marker: {e}")
+        else:
+            print("[DEBUG] Laser distance is None. Skipping laser marker.")
 
         try:
             result = self.pupil_detector.DetectPupil(
                 frame_copy,
                 radiusGuess=50,
-                )
+            )
 
             if result:
                 drawing, center, ellipse, radius = result
@@ -73,13 +84,19 @@ class HumanInterfaceManager:
                 self.ellipse = ellipse
                 self.pupil_radius = radius
 
+                # Double-check dimensions
+                print(f"[DEBUG] Drawing shape: {drawing.shape}, pupil center: {center}")
+
                 rgb_image = cv2.cvtColor(drawing, cv2.COLOR_BGR2RGB)
                 h, w, ch = rgb_image.shape
                 bytes_per_line = ch * w
                 q_img = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
                 return QPixmap.fromImage(q_img)
+            else:
+                print("[DEBUG] Pupil detection returned no result.")
         except Exception as e:
             print(f"[ERROR] get_overlay_image failed: {e}")
+
         return None
 
     def get_pupil_coords(self):
