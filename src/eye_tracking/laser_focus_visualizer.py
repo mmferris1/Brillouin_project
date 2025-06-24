@@ -31,6 +31,9 @@ class LaserFocusVisualizer:
         """
         Draw a red cross at the interpolated laser focus point based on distance of the laser.
         """
+        if len(image.shape) == 2 or image.shape[2] == 1:
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+
         drawing = image.copy()
         distances = sorted(self.laser_lookup.keys())
 
