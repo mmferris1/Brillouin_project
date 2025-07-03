@@ -7,7 +7,7 @@ CHECKERBOARD = (8, 6)  # Number of inner corners per a chessboard row and column
 SQUARE_SIZE = 0.0215  # Size of a square in meters (adjust to your checkerboard)
 
 # === Prepare object points ===
-objp = np.zeros((CHECKERBOARD[0]*CHECKERBOARD[1], 3), np.float32)
+objp = np.zeros((CHECKERBOARD[0] * CHECKERBOARD[1], 3), np.float32)
 objp[:, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
 objp *= SQUARE_SIZE
 
@@ -16,10 +16,12 @@ objpoints = []  # 3D points in real world
 imgpoints = []  # 2D points in image plane
 
 # === Load calibration images ===
-image_paths = glob.glob("calib_images/*.jpg")  # Put calibration images in 'calib_images' folder
+image_paths = []
+for i in range(1, 21):  # Replace 1–21 with your actual number of images
+    image_paths += glob.glob(f"/Users/margaretferris/Desktop/{i}.bmp")
 
 if not image_paths:
-    print("No images found in 'calib_images/' folder.")
+    print("No images found.")
     exit()
 
 for fname in image_paths:
@@ -54,7 +56,14 @@ print(K)
 print("\nDistortion coefficients:")
 print(dist.ravel())
 
-# === Save to file ===
-np.savez("camera_intrinsics.npz", K=K, dist=dist, image_size=gray.shape[::-1])
+# === Save to text file ===
+with open("camera_intrinsics.txt", "w") as f:
+    f.write("Camera matrix (K):\n")
+    for row in K:
+        f.write("  " + "  ".join(f"{val:.6f}" for val in row) + "\n")
+    f.write("\nDistortion coefficients:\n")
+    f.write("  " + "  ".join(f"{val:.6f}" for val in dist.ravel()) + "\n")
+    f.write("\nImage size (width, height):\n")
+    f.write(f"  {gray.shape[1]}, {gray.shape[0]}\n")
 
-print("\nSaved to 'camera_intrinsics.npz'")
+print("\nSaved to 'camera_intrinsics.txt'")

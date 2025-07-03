@@ -150,3 +150,19 @@ class HumanInterfaceManager:
     def snap_camera_image(self):
         frame = self.camera.snap()
         self.latest_frame = frame
+        #
+        # # returns current position of motor, in um
+        # def updatePosition(self):
+        #     # print('[ZaberDevice] updatePosition')
+        #     with self.ZaberLock:
+        #         try:
+        #             reply_z = self.z_axis.send("get pos")
+        #         except:
+        #             print("[ZaberDevice] Motor busy")
+        #             return self._lastPosition
+        #         self._lastPosition = float(reply_z.data) * self.microstep_size
+        #     return self._lastPosition
+        #
+        # # moves Zaber stages to home position
+        # def moveHome(self):
+        #     self.moveAbs(self.homeLoc)

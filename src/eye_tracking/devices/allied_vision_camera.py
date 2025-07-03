@@ -162,3 +162,24 @@ class AlliedVisionCamera(BaseMakoCamera):
         self.camera.__exit__(None, None, None)
         self.vimba.__exit__(None, None, None)
         print("[AVCamera] Camera and Vimba shut down.")
+
+    def set_trigger_mode(self, mode="On", source="Line1"):
+        """
+        Enable or disable external trigger mode.
+        mode: 'On' or 'Off'
+        source: 'Line1', 'Line2', 'Software', etc.
+        """
+        try:
+            # Select trigger function (e.g., FrameStart)
+            self.camera.get_feature_by_name("TriggerSelector").set("FrameStart")
+
+            # Set trigger mode (On = wait for trigger)
+            self.camera.get_feature_by_name("TriggerMode").set(mode)
+
+            # Set the trigger source (Line1 for hardware trigger, or 'Software')
+            self.camera.get_feature_by_name("TriggerSource").set(source)
+
+            print(f"[AVCamera] Trigger mode set to {mode}, source: {source}")
+        except VimbaFeatureError as e:
+            print(f"[AVCamera] Failed to set trigger mode: {e}")
+

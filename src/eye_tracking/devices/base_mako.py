@@ -50,3 +50,6 @@ class BaseMakoCamera(ABC):
     def close(self):
         """Clean up and release the camera."""
         pass
+
+    def set_trigger_mode(self, mode, source):
+        raise NotImplementedError("Trigger mode not implemented in base class.")
