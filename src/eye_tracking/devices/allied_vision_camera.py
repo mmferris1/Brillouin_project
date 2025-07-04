@@ -3,7 +3,7 @@ import numpy as np
 from .base_mako import BaseMakoCamera
 
 class AlliedVisionCamera(BaseMakoCamera):
-    def __init__(self):
+    def __init__(self, index=0):
         print("[AVCamera] Connecting to Allied Vision Camera...")
         self.vimba = Vimba.get_instance()
         self.vimba.__enter__()
@@ -13,7 +13,7 @@ class AlliedVisionCamera(BaseMakoCamera):
         cameras = self.vimba.get_all_cameras()
         if not cameras:
             raise RuntimeError("No Allied Vision camera found.")
-        self.camera = cameras[0]
+        self.camera = cameras[index]
         self.camera.__enter__()
         print(f"[AVCamera] ...Found camera: {self.camera.get_id()}")
 
