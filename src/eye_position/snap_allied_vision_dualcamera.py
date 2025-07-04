@@ -6,10 +6,10 @@ def get_trigger_output(cam):
     """trigger and be triggered"""
     try:
         line_selector = cam.camera.get_feature_by_name("LineSelector")
-        line_selector.set("Line3")  # Use Line3 for output
+        line_selector.set("Line3")  # Use Line1 for output
         cam.camera.get_feature_by_name("LineMode").set("Output")
         cam.camera.get_feature_by_name("LineSource").set("ExposureActive")
-        print("[triggerer] Line3 configured to output trigger during exposure.")
+        print("[triggerer] Line1 configured to output trigger during exposure.")
     except Exception as e:
         print(f"[triggerer] Failed to configure trigger output: {e}")
 
@@ -25,15 +25,15 @@ def main():
     cam_right.set_gain(10)
 
     # right waits to be triggered
-    cam_right.set_trigger_mode("On", "Line1")
+    cam_right.set_trigger_mode("On", "Line3")
 
     # trigger capture, on Line3?
     cam_left.set_trigger_mode("Off")  # Capture normally
     cam_left.set_acquisition_mode("SingleFrame")  # Or "Continuous" for live stream
-    configure_master_trigger_output(cam_left)
+    get_trigger_output(cam_left)
 
     try:
-        print("[DEBUG] Triggering master (left) camera via software...")
+        print("[DEBUG] Triggering triggerer (left) camera via software...")
         cam_left.camera.get_feature_by_name("TriggerSoftware").run()
 
         print("[DEBUG] Reading images...")
