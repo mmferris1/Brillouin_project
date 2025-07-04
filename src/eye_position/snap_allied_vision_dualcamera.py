@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 from src.eye_tracking.devices.allied_vision_camera import AlliedVisionCamera
 
-
 def get_trigger_output(cam):
     """trigger and be triggered"""
     try:
