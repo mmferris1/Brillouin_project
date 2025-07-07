@@ -12,14 +12,16 @@ def main():
     # Calibrate the left camera
     print("\n[LEFT CAMERA] Starting intrinsic calibration...")
     K1, D1, size1 = calibrator.calibrate_single_camera(
-        image_dir=r"C:\Users\Mandelstam\Documents\Connor\data\2025-6-5\left_camera",
+        image_dir="/Users/margaretferris/Desktop/left_camera",
+        #r"C:\Users\Mandelstam\Documents\Connor\data\2025-6-5\left_camera"
         save_path="left_intrinsics.txt"
     )
 
     # Calibrate the right camera
     print("\n[RIGHT CAMERA] Starting intrinsic calibration...")
     K2, D2, size2 = calibrator.calibrate_single_camera(
-        image_dir=r"C:\Users\Mandelstam\Documents\Connor\data\2025-6-5\right_camera",
+        image_dir="/Users/margaretferris/Desktop/right_camera",
+        #r"C:\Users\Mandelstam\Documents\Connor\data\2025-6-5\right_camera"
         save_path="right_intrinsics.txt"
     )
 
