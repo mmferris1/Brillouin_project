@@ -30,7 +30,7 @@ def main():
     # trigger capture, on Line3?
     cam_left.set_trigger_mode("Off")  # Capture normally
     cam_left.set_acquisition_mode("SingleFrame")  # Or "Continuous" for live stream
-    configure_master_trigger_output(cam_left)
+    get_trigger_output(cam_left)
 
     try:
         print("[DEBUG] Triggering master (left) camera via software...")
