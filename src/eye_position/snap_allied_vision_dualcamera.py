@@ -2,58 +2,38 @@ import cv2
 import numpy as np
 from src.eye_tracking.devices.allied_vision_camera import AlliedVisionCamera
 
-def get_trigger_output(cam):
-    """trigger and be triggered"""
-    try:
-        line_selector = cam.camera.get_feature_by_name("LineSelector")
-        line_selector.set("Line3")  # Use Line1 for output
-        cam.camera.get_feature_by_name("LineMode").set("Output")
-        cam.camera.get_feature_by_name("LineSource").set("ExposureActive")
-        print("[triggerer] Line1 configured to output trigger during exposure.")
-    except Exception as e:
-        print(f"[triggerer] Failed to configure trigger output: {e}")
+#from allied_vision_camera import AlliedVisionCamera
 
-def main():
-    print("[DEBUG] Initializing both cameras (index-based)...")
-    cam_left = AlliedVisionCamera(index=0)   # triggerer
-    cam_right = AlliedVisionCamera(index=1)  # triggered
+# Init both cameras
+cam0 = AlliedVisionCamera(index=0)
+cam1 = AlliedVisionCamera(index=1)
 
-    # exposure and stuff set up
-    cam_left.set_exposure(5000)
-    cam_right.set_exposure(5000)
-    cam_left.set_gain(10)
-    cam_right.set_gain(10)
+# Set acquisition + trigger mode
+for cam in [cam0, cam1]:
+    cam.set_acquisition_mode("Continuous")
+    cam.set_trigger_mode(mode="On", source="Software")
 
-    # right waits to be triggered
-    cam_right.set_trigger_mode("On", "Line3")
+# Get and queue one frame per camera
+frame0 = cam0.camera.get_frame()
+frame1 = cam1.camera.get_frame()
 
-    # trigger capture, on Line3?
-    cam_left.set_trigger_mode("Off")  # Capture normally
-    cam_left.set_acquisition_mode("SingleFrame")  # Or "Continuous" for live stream
-    get_trigger_output(cam_left)
+cam0.camera.queue_frame(frame0)
+cam1.camera.queue_frame(frame1)
 
-    try:
-        print("[DEBUG] Triggering triggerer (left) camera via software...")
-        cam_left.camera.get_feature_by_name("TriggerSoftware").run()
+# Trigger software capture (quickly, back-to-back)
+cam0.camera.run_feature_command("TriggerSoftware")
+cam1.camera.run_feature_command("TriggerSoftware")
 
-        print("[DEBUG] Reading images...")
-        image_left = cam_left.snap()
-        image_right = cam_right.snap()
+# Wait for frame to be captured
+frame0.wait_for_capture(1000)
+frame1.wait_for_capture(1000)
 
-        print("[DEBUG] Captured both frames.")
+# Convert to numpy
+img0 = frame0.as_numpy_ndarray()
+img1 = frame1.as_numpy_ndarray()
 
-        for img, name in zip([image_left, image_right], ["Left", "Right"]):
-            norm = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-            cv2.imshow(f"{name} Camera", norm)
+print("Captured:", img0.shape, img1.shape)
 
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-
-    finally:
-        cam_left.close()
-        cam_right.close()
-        print("[DEBUG] Cameras closed.")
-
-
-if __name__ == "__main__":
-    main()
+# Shutdown
+cam0.close()
+cam1.close()

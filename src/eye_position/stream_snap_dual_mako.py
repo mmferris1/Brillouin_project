@@ -7,7 +7,7 @@ from vimba import Vimba
 from src.eye_tracking.devices.allied_vision_camera import AlliedVisionCamera
 
 # chanege to path name
-SAVE_DIR = "/Users/margaretferris/Desktop/snaps"
+SAVE_DIR = r"C:\Users\Mandelstam\Documents\Connor\data\2025-6-5"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 def get_camera_ids():
@@ -39,6 +39,9 @@ def main():
     cam_right.set_exposure(5000)
     cam_left.set_gain(10)
     cam_right.set_gain(10)
+
+    cam_left.set_trigger_mode("Off")
+    cam_right.set_trigger_mode("Off")
 
     start_camera_stream(cam_left, "Left Camera")
     start_camera_stream(cam_right, "Right Camera")

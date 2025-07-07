@@ -5,6 +5,10 @@ import time
 from vimba import Vimba
 from src.eye_tracking.devices.allied_vision_camera import AlliedVisionCamera
 
+def preprocess(frame):
+    img = frame if frame.ndim == 2 else frame[..., 0]
+    return cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
 def get_camera_ids():
     with Vimba.get_instance() as vimba:
         cams = vimba.get_all_cameras()
@@ -33,8 +37,15 @@ def main():
     print(f"[INFO] Found cameras: {camera_ids}")
 
     # Launch both cameras in parallel threads
-    cam1 = start_camera_stream(camera_ids[0], "Camera 1")
-    cam2 = start_camera_stream(camera_ids[1], "Camera 2")
+    cam1 = AlliedVisionCamera(0)
+    cam1.set_exposure(5000)
+    cam1.set_gain(10)
+    cam1.start_stream(lambda frame: cv2.imshow("Camera 1", preprocess(frame)))
+
+    cam2 = AlliedVisionCamera(1)
+    cam2.set_exposure(5000)
+    cam2.set_gain(10)
+    cam2.start_stream(lambda frame: cv2.imshow("Camera 2", preprocess(frame)))
 
     try:
         print("[INFO] Streaming")

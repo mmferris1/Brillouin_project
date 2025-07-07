@@ -13,6 +13,8 @@ class AlliedVisionCamera(BaseMakoCamera):
         cameras = self.vimba.get_all_cameras()
         if not cameras:
             raise RuntimeError("No Allied Vision camera found.")
+        if index >= len(cameras):
+            raise RuntimeError(f"[AVCamera] camera index {index} out of range. Found {len(cameras)} camera(s)")
         self.camera = cameras[index]
         self.camera.__enter__()
         print(f"[AVCamera] ...Found camera: {self.camera.get_id()}")
@@ -95,11 +97,12 @@ class AlliedVisionCamera(BaseMakoCamera):
             return None
 
     def snap(self):
-        """Capture a single frame. Temporarily stops streaming if needed."""
+        """Capture a single frame. Temporarily stops streaming if needed"""
         was_streaming = self.streaming
         if was_streaming:
             self.stop_stream()
 
+        self.set_trigger_mode("off")
         self.set_acquisition_mode("SingleFrame")
 
         frame = self.camera.get_frame()
@@ -113,7 +116,6 @@ class AlliedVisionCamera(BaseMakoCamera):
             self.start_stream(self._last_callback)
 
         return image
-
     def set_acquisition_mode(self, mode="Continuous"):
         """
         "SingleFrame" or "Continuous"
@@ -139,7 +141,16 @@ class AlliedVisionCamera(BaseMakoCamera):
             cam.queue_frame(frame)
 
         # Allocate and queue initial frames
-        self.frames = [self.camera.get_frame() for _ in range(buffer_count)]
+        # Ensure pixel format
+        try:
+            self.camera.get_feature_by_name("PixelFormat").set("Mono8")
+            print("[AVCamera] Pixel format set to Mono8")
+        except Exception as e:
+            print(f"[AVCamera] Failed to set PixelFormat: {e}")
+
+        # Allocate and queue initial frames
+        self.frames = [self.camera.new_frame() for _ in range(buffer_count)]
+
         for frame in self.frames:
             self.camera.queue_frame(frame)
 
