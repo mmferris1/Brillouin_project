@@ -5,21 +5,21 @@ def main():
     calibrator = StereoCalibrator(
         left_dir="left_images",  # Not used here, but required by constructor
         right_dir="right_images",
-        pattern_size=(8, 6),
+        pattern_size=(6, 8),
         square_size=0.0215
     )
 
     # Calibrate the left camera
     print("\n[LEFT CAMERA] Starting intrinsic calibration...")
     K1, D1, size1 = calibrator.calibrate_single_camera(
-        image_dir="left_individual",
+        image_dir="/Users/margaretferris/Desktop/calibration_photos/left_individual",
         save_path="left_intrinsics.txt"
     )
 
     # Calibrate the right camera
     print("\n[RIGHT CAMERA] Starting intrinsic calibration...")
     K2, D2, size2 = calibrator.calibrate_single_camera(
-        image_dir="right_individual",
+        image_dir="/Users/margaretferris/Desktop/calibration_photos/right_individual",
         save_path="right_intrinsics.txt"
     )
 
