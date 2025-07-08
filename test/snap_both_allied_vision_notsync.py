@@ -5,6 +5,10 @@ from eye_tracking.devices.allied_vision_camera import AlliedVisionCamera
 
 SAVE_DIR = r"C:\Users\Mandelstam\Documents\Connor\data\2025-6-5\take7"
 NUM_FRAMES = 5
+DISPLAY_SCALE = 0.5  # Resize factor for display
+
+def resize_image(img, scale=0.5):
+    return cv2.resize(img, (0, 0), fx=scale, fy=scale)
 
 def main():
     os.makedirs(SAVE_DIR, exist_ok=True)
@@ -23,7 +27,7 @@ def main():
             print(f"\n[DEBUG] Waiting for key press to capture frame {i}...")
             print("Press any key in the image window to capture the next frame.")
 
-            # Create a dummy window for key input
+            # Dummy window for input
             cv2.imshow("Press any key to snap", np.zeros((100, 400), dtype=np.uint8))
             cv2.waitKey(0)
             cv2.destroyAllWindows()
@@ -40,14 +44,22 @@ def main():
             left_disp = cv2.normalize(left_img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
             right_disp = cv2.normalize(right_img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
 
-            # Show both side by side
-            combined = np.hstack((left_disp, right_disp))
+            # Resize for screen
+            left_disp_small = resize_image(left_disp, DISPLAY_SCALE)
+            right_disp_small = resize_image(right_disp, DISPLAY_SCALE)
+
+            # Add text labels
+            cv2.putText(left_disp_small, "Left", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 255, 2)
+            cv2.putText(right_disp_small, "Right", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 255, 2)
+
+            # Show both side-by-side
+            combined = np.hstack((left_disp_small, right_disp_small))
             cv2.imshow(f"Frame {i} Preview - Left | Right", combined)
             print("[DEBUG] Press any key to save this frame.")
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
-            # Save images
+            # Save full-resolution originals
             left_path = os.path.join(SAVE_DIR, f"left_{i}.png")
             right_path = os.path.join(SAVE_DIR, f"right_{i}.png")
             cv2.imwrite(left_path, left_img)
