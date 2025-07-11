@@ -1,7 +1,7 @@
 import queue
 import threading
 import time
-from allied_vision_camera import AlliedVisionCamera
+from allied_vision_camera2 import AlliedVisionCamera
 
 frame_q0 = queue.Queue()
 frame_q1 = queue.Queue()

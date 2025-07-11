@@ -3,9 +3,11 @@ import cv2
 import numpy as np
 from eye_tracking.devices.allied_vision_camera import AlliedVisionCamera
 
-SAVE_DIR = r"C:\Users\Mandelstam\Documents\Connor\data\2025-6-5\take7"
-NUM_FRAMES = 5
-DISPLAY_SCALE = 0.5  # Resize factor for display
+SAVE_DIR = r"C:\Users\Mandelstam\Documents\Connor\data\2025-6-5\take8"
+NUM_FRAMES = 30
+
+
+DISPLAY_SCALE = 0.4  # Resize factor for display
 
 def resize_image(img, scale=0.5):
     return cv2.resize(img, (0, 0), fx=scale, fy=scale)
