@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import glob
 import os
-
+import re
 
 class StereoCalibrator:
     def __init__(self, left_dir, right_dir, pattern_size=(8, 6), square_size=0.0215):
@@ -36,10 +36,28 @@ class StereoCalibrator:
         objp *= self.square_size
         return objp
 
+    def extract_index(self, filename):
+        match = re.search(r"(\d+)", filename)
+        return int(match.group(1)) if match else -1
+
     def load_image_pairs(self):
-        left_images = sorted(glob.glob(os.path.join(self.left_dir, "*.png")))
-        right_images = sorted(glob.glob(os.path.join(self.right_dir, "*.png")))
-        return left_images, right_images
+        left_images = glob.glob(os.path.join(self.left_dir, "*.png"))
+        right_images = glob.glob(os.path.join(self.right_dir, "*.png"))
+
+        left_map = {self.extract_index(os.path.basename(f)): f for f in left_images}
+        right_map = {self.extract_index(os.path.basename(f)): f for f in right_images}
+
+        common_indices = sorted(set(left_map) & set(right_map))
+        if not common_indices:
+            raise ValueError("No matching indices found between left and right images.")
+
+        left_sorted = [left_map[i] for i in common_indices]
+        right_sorted = [right_map[i] for i in common_indices]
+
+        for l, r in zip(left_sorted, right_sorted):
+            print(f"[PAIR] {os.path.basename(l)} <--> {os.path.basename(r)}")
+
+        return left_sorted, right_sorted
 
     def find_corners(self, gray, image_name):
         found, corners = cv2.findChessboardCorners(gray, self.pattern_size, None)
@@ -78,11 +96,20 @@ class StereoCalibrator:
             None, None,
             None, None,
             gray1.shape[::-1],
-            flags=cv2.CALIB_FIX_INTRINSIC,
+            flags=0,
             criteria=(cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-5)
         )
 
         print("[INFO] Stereo calibration completed.")
+        print("[INFO] Stereo calibration completed.")
+        print("[RESULT] Camera Matrix 1:\n", self.cameraMatrix1)
+        print("[RESULT] Distortion Coeffs 1:\n", self.distCoeffs1)
+        print("[RESULT] Camera Matrix 2:\n", self.cameraMatrix2)
+        print("[RESULT] Distortion Coeffs 2:\n", self.distCoeffs2)
+        print("[RESULT] Rotation (R):\n", self.R)
+        print("[RESULT] Translation (T):\n", self.T)
+        print("[RESULT] Essential Matrix (E):\n", self.E)
+        print("[RESULT] Fundamental Matrix (F):\n", self.F)
         return ret
 
     def compute_rectification(self):
@@ -94,6 +121,13 @@ class StereoCalibrator:
             image_size, self.R, self.T
         )
         print("[INFO] Stereo rectification completed.")
+        print("[INFO] Stereo rectification completed.")
+        print("[RESULT] Rectification Transform (R1):\n", self.R1)
+        print("[RESULT] Rectification Transform (R2):\n", self.R2)
+        print("[RESULT] Projection Matrix 1 (P1):\n", self.P1)
+        print("[RESULT] Projection Matrix 2 (P2):\n", self.P2)
+        print("[RESULT] Disparity-to-Depth Mapping Matrix (Q):\n", self.Q)
+
         return self.Q
 
     def triangulate(self, pts1, pts2):
@@ -163,3 +197,28 @@ class StereoCalibrator:
             print(f"[INFO] Intrinsics saved to: {save_path}")
 
         return K, dist, gray.shape[::-1]
+
+    def stereo_calibrate(self, K1, D1, K2, D2, image_size):
+        """Performs stereo calibration using the known intrinsics and loaded image points."""
+        if not self.objpoints or not self.imgpoints_left or not self.imgpoints_right:
+            raise ValueError("No object/image points loaded for stereo calibration.")
+
+        flags = (cv2.CALIB_FIX_INTRINSIC)
+
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-5)
+
+        ret, K1, D1, K2, D2, R, T, E, F = cv2.stereoCalibrate(
+            self.objpoints,
+            self.imgpoints_left,
+            self.imgpoints_right,
+            K1, D1,
+            K2, D2,
+            imageSize=image_size,
+            criteria=criteria,
+            flags=flags
+        )
+
+        print("[INFO] Stereo calibration complete.")
+        print("[DEBUG] Rotation matrix (R):\n", R)
+        print("[DEBUG] Translation vector (T):\n", T)
+        return R, T, E, F

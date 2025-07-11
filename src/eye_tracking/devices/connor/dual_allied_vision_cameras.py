@@ -10,7 +10,6 @@ def _handler0(cam, frame):
     frame_q0.put(frame)
     cam.queue_frame(frame)
 
-
 def _handler1(cam, frame):
     frame_q1.put(frame)
     cam.queue_frame(frame)

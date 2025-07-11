@@ -137,7 +137,7 @@ class PupilDetection:
             if m['m00'] != 0:
                 dot = (int(m['m10'] / m['m00']), int(m['m01'] / m['m00']))
                 cv2.circle(drawing, dot, self.center_dot_radius, (0, 255, 0), -1)
-                center = (int(m['m01'] / m['m00']), int(m['m10'] / m['m00']))
+                center = (int(m['m10'] / m['m00']), int(m['m01'] / m['m00']))
 
             # fit an ellipse around the contour and draw it into the image
             try:
