@@ -5,8 +5,8 @@ import os
 def main():
     # Initialize calibrator
     calibrator = StereoCalibrator(
-        left_dir="/Users/margaretferris/Desktop/take8/left",
-        right_dir="/Users/margaretferris/Desktop/take8/right",
+        left_dir="C:/Users/Mandelstam/Documents/Connor/data/2025-6-5/take8/left",
+        right_dir="C:/Users/Mandelstam/Documents/Connor/data/2025-6-5/take8/right",
         pattern_size=(8, 6),
         square_size=0.0025
     )

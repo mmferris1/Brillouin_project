@@ -28,7 +28,7 @@ class OrloskyGUI(QWidget):
         self.calibrator.distCoeffs2 = D2
         self.calibrator.R = R
         self.calibrator.T = T
-        self.calibrator.compute_rectification()
+        self.calibrator.compute_rectification(image_size=(2048, 2048))
 
         self.cams = DualAlliedVisionCameras()
         self.cams.start_stream()
@@ -64,9 +64,11 @@ class OrloskyGUI(QWidget):
         try:
             self.cams.clear_queues()
             self.cams.trigger_both()
+            f0, f1 = self.cams.get_latest_frames()
+            if f0 is None or f1 is None:
+                self.image_label.setText("No frames received.")
+                return
 
-            f0 = self.cams.cam0.camera.get_frame()
-            f1 = self.cams.cam1.camera.get_frame()
             imgL = f0.as_numpy_ndarray()
             imgR = f1.as_numpy_ndarray()
 
@@ -86,11 +88,26 @@ class OrloskyGUI(QWidget):
             imgL = annotate_image(imgL, centerL, point_3d)
             imgR = annotate_image(imgR, centerR, point_3d)
 
-            combined = np.hstack((imgR, imgL))
-            rgb = cv2.cvtColor(combined, cv2.COLOR_BGR2RGB)
-            h, w, ch = rgb.shape
-            qt_img = QImage(rgb.data, w, h, ch * w, QImage.Format_RGB888)
-            self.label.setPixmap(QPixmap.fromImage(qt_img))
+            # 🔧 Ensure both images are 3-channel RGB
+            def to_rgb(img):
+                if img.ndim == 2 or img.shape[2] == 1:
+                    return cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+                return img
+
+            imgL = to_rgb(imgL)
+            imgR = to_rgb(imgR)
+
+            combined = np.hstack((imgR, imgL))  # now safe
+            rgb = combined  # already in RGB format
+
+            scale = 0.3  # adjust for GUI size
+            rgb_resized = cv2.resize(rgb, (0, 0), fx=scale, fy=scale)
+
+            h, w, ch = rgb_resized.shape
+            bytes_per_line = ch * w
+            qt_image = QImage(rgb_resized.data, w, h, bytes_per_line, QImage.Format_RGB888)
+
+            self.image_label.setPixmap(QPixmap.fromImage(qt_image))
 
         except Exception as e:
             self.label.setText(f"[ERROR] {str(e)}")

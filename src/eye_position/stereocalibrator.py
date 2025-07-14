@@ -112,8 +112,9 @@ class StereoCalibrator:
         print("[RESULT] Fundamental Matrix (F):\n", self.F)
         return ret
 
-    def compute_rectification(self):
-        image_size = cv2.imread(sorted(glob.glob(os.path.join(self.left_dir, "*.png")))[0]).shape[1::-1]
+    def compute_rectification(self, image_size=None):
+        if image_size is None:
+            image_size = cv2.imread(sorted(glob.glob(os.path.join(self.left_dir, "*.png")))[0]).shape[1::-1]
 
         self.R1, self.R2, self.P1, self.P2, self.Q, _, _ = cv2.stereoRectify(
             self.cameraMatrix1, self.distCoeffs1,
