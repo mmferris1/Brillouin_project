@@ -74,11 +74,22 @@ def main():
         pts1 = np.array([centerL], dtype=np.float32)
         pts2 = np.array([centerR], dtype=np.float32)
 
-        point_3d = calibrator.triangulate(pts1, pts2)
-        print(f"[RESULT] Frame {i} → 3D point: {point_3d[0]}")
+        # Get rectification transforms and projection matrices
+        R1 = calibrator.R1
+        R2 = calibrator.R2
+        P1 = calibrator.P1
+        P2 = calibrator.P2
 
-        drawnL = annotate_image(drawnL, centerL, point_3d[0])
-        drawnR = annotate_image(drawnR, centerR, point_3d[0])
+        # Rectify (undistort + rectify) pupil coordinates to match P1/P2
+        pts1_rect = cv2.undistortPoints(np.expand_dims(pts1, axis=1), K1, D1, R=R1, P=P1)
+        pts2_rect = cv2.undistortPoints(np.expand_dims(pts2, axis=1), K2, D2, R=R2, P=P2)
+
+        point_4d = cv2.triangulatePoints(P1, P2, pts1_rect, pts2_rect)
+        point_3d = (point_4d[:3] / point_4d[3]).reshape(-1)
+        print(f"[RESULT] Frame {i} → 3D point: {point_3d}")
+
+        drawnL = annotate_image(drawnL, centerL, point_3d)
+        drawnR = annotate_image(drawnR, centerR, point_3d)
 
         combined = np.hstack((drawnR, drawnL))
         cv2.imshow(f"Pupil Detection Frame {i}", combined)
