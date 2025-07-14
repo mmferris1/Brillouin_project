@@ -1,20 +1,21 @@
 import sys
+import time
 import cv2
 import numpy as np
-import threading
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QPushButton
 from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtCore import QTimer
 
-from src.eye_tracking.devices.connor.dual_allied_vision_cameras import DualAlliedVisionCameras
+from src.eye_tracking.devices.connor.allied_vision_camera2 import AlliedVisionCamera
 from src.eye_position.triangulation_v3 import PupilDetection, StereoCalibrator, annotate_image
+
 
 class LivePupilGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Live Pupil Triangulation")
 
-        # Load calibration
+        # Load stereo calibration
         calib = np.load("stereo_calibration2.npz")
         K1, D1 = calib["K1"], calib["D1"]
         K2, D2 = calib["K2"], calib["D2"]
@@ -27,12 +28,15 @@ class LivePupilGUI(QWidget):
         self.calibrator.distCoeffs2 = D2
         self.calibrator.R = R
         self.calibrator.T = T
-        self.calibrator.compute_rectification()
+        self.calibrator.compute_rectification(image_size=(2048, 2048))
 
         self.detector = PupilDetection()
-        self.cams = DualAlliedVisionCameras()
-        self.cams.start_stream()
 
+        # ✅ Use the stereo camera wrapper
+        from src.eye_tracking.devices.connor.dual_allied_vision_cameras import DualAlliedVisionCameras
+        self.cams = DualAlliedVisionCameras()
+
+        # GUI layout
         self.image_label = QLabel("Waiting for data...")
         self.start_button = QPushButton("Start")
         self.stop_button = QPushButton("Stop")
@@ -44,6 +48,7 @@ class LivePupilGUI(QWidget):
         layout.addWidget(self.stop_button)
         self.setLayout(layout)
 
+        # Timer and buttons
         self.timer = QTimer()
         self.timer.timeout.connect(self.snap_and_process)
 
@@ -56,20 +61,28 @@ class LivePupilGUI(QWidget):
         self.stop_button.setEnabled(True)
 
     def stop_loop(self):
+        print("[DEBUG] Stop loop clicked")
         self.timer.stop()
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
 
     def snap_and_process(self):
+        print("[DEBUG] snap_and_process called")
+
         try:
-            self.cams.clear_queues()
-            self.cams.trigger_both()
-            f0 = self.cams.cam0.camera.get_frame()
-            f1 = self.cams.cam1.camera.get_frame()
+            # Snap stereo image pair
+            f0, f1 = self.cams.snap_once()
+
+            if f0.get_status() != 0 or f1.get_status() != 0:
+                self.image_label.setText("Incomplete frame received.")
+                return
 
             imgL = f0.as_numpy_ndarray()
             imgR = f1.as_numpy_ndarray()
 
+            print(f"[DEBUG] imgL shape: {imgL.shape}, imgR shape: {imgR.shape}")
+
+            # Pupil detection
             resultL = self.detector.DetectPupil(imgL, radiusGuess=80)
             resultR = self.detector.DetectPupil(imgR, radiusGuess=80)
 
@@ -87,12 +100,21 @@ class LivePupilGUI(QWidget):
             drawnL = annotate_image(drawnL, centerL, point_3d[0])
             drawnR = annotate_image(drawnR, centerR, point_3d[0])
 
-            combined = np.hstack((drawnR, drawnL))
-            rgb = cv2.cvtColor(combined, cv2.COLOR_BGR2RGB)
+            def to_rgb(img):
+                if img.ndim == 2 or img.shape[2] == 1:
+                    return cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+                return img
 
-            h, w, ch = rgb.shape
+            drawnL = to_rgb(drawnL)
+            drawnR = to_rgb(drawnR)
+
+            combined = np.hstack((drawnR, drawnL))
+            rgb_resized = cv2.resize(combined, (0, 0), fx=0.3, fy=0.3)
+
+            h, w, ch = rgb_resized.shape
             bytes_per_line = ch * w
-            qt_image = QImage(rgb.data, w, h, bytes_per_line, QImage.Format_RGB888)
+            qt_image = QImage(rgb_resized.data, w, h, bytes_per_line, QImage.Format_RGB888)
+
             self.image_label.setPixmap(QPixmap.fromImage(qt_image))
 
         except Exception as e:
@@ -100,13 +122,20 @@ class LivePupilGUI(QWidget):
 
     def closeEvent(self, event):
         self.stop_loop()
-        self.cams.stop_stream()
-        self.cams.close()
+        self.camL.close()
+        self.camR.close()
         event.accept()
 
-if __name__ == "__main__":
+
+def main():
     app = QApplication(sys.argv)
-    gui = LivePupilGUI()
-    gui.resize(1200, 500)
-    gui.show()
-    sys.exit(app.exec_())
+    window = LivePupilGUI()
+    window.resize(1000, 200)
+    window.show()
+    print("[DEBUG] GUI running event loop")
+    app.exec_()
+    print("[DEBUG] Event loop exited")
+
+
+if __name__ == "__main__":
+    main()
