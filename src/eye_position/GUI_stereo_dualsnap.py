@@ -82,49 +82,52 @@ class LivePupilGUI(QWidget):
 
             print(f"[DEBUG] imgL shape: {imgL.shape}, imgR shape: {imgR.shape}")
 
-            # Pupil detection
-            resultL = self.detector.DetectPupil(imgL, radiusGuess=80)
-            resultR = self.detector.DetectPupil(imgR, radiusGuess=80)
-
-            if not resultL or not resultR:
-                self.image_label.setText("Pupil not detected in one or both images.")
-                return
-
-            drawnL, centerL, _, _ = resultL
-            drawnR, centerR, _, _ = resultR
-
-            pts1 = np.array([centerL], dtype=np.float32)
-            pts2 = np.array([centerR], dtype=np.float32)
-
-            # Get rectification transforms
-            R1 = self.calibrator.R1
-            R2 = self.calibrator.R2
-            P1 = self.calibrator.P1
-            P2 = self.calibrator.P2
-            K1 = self.calibrator.cameraMatrix1
-            D1 = self.calibrator.distCoeffs1
-            K2 = self.calibrator.cameraMatrix2
-            D2 = self.calibrator.distCoeffs2
-
-            # Rectify pupil centers
-            pts1_rect = cv2.undistortPoints(np.expand_dims(pts1, axis=1), K1, D1, R=R1, P=P1)
-            pts2_rect = cv2.undistortPoints(np.expand_dims(pts2, axis=1), K2, D2, R=R2, P=P2)
-
-            # Triangulate
-            point_4d = cv2.triangulatePoints(P1, P2, pts1_rect, pts2_rect)
-            point_3d = (point_4d[:3] / point_4d[3]).reshape(-1)
-
-            drawnL = annotate_image(drawnL, centerL, point_3d)
-            drawnR = annotate_image(drawnR, centerR)
-
+            # Convert to RGB for GUI (so we can draw even without detection)
             def to_rgb(img):
                 if img.ndim == 2 or img.shape[2] == 1:
                     return cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
                 return img
 
-            drawnL = to_rgb(drawnL)
-            drawnR = to_rgb(drawnR)
+            drawnL = to_rgb(imgL.copy())
+            drawnR = to_rgb(imgR.copy())
 
+            # Attempt pupil detection
+            resultL = self.detector.DetectPupil(imgL, radiusGuess=80)
+            resultR = self.detector.DetectPupil(imgR, radiusGuess=80)
+
+            if resultL:
+                _, centerL, _, _ = resultL
+                drawnL = annotate_image(drawnL, centerL)  # No 3D point yet
+
+            if resultR:
+                _, centerR, _, _ = resultR
+                drawnR = annotate_image(drawnR, centerR)
+
+            # If both pupils found, perform triangulation and update left image with 3D point
+            if resultL and resultR:
+                centerL = resultL[1]
+                centerR = resultR[1]
+                pts1 = np.array([centerL], dtype=np.float32)
+                pts2 = np.array([centerR], dtype=np.float32)
+
+                R1 = self.calibrator.R1
+                R2 = self.calibrator.R2
+                P1 = self.calibrator.P1
+                P2 = self.calibrator.P2
+                K1 = self.calibrator.cameraMatrix1
+                D1 = self.calibrator.distCoeffs1
+                K2 = self.calibrator.cameraMatrix2
+                D2 = self.calibrator.distCoeffs2
+
+                pts1_rect = cv2.undistortPoints(np.expand_dims(pts1, axis=1), K1, D1, R=R1, P=P1)
+                pts2_rect = cv2.undistortPoints(np.expand_dims(pts2, axis=1), K2, D2, R=R2, P=P2)
+
+                point_4d = cv2.triangulatePoints(P1, P2, pts1_rect, pts2_rect)
+                point_3d = (point_4d[:3] / point_4d[3]).reshape(-1)
+
+                drawnL = annotate_image(drawnL, centerL, point_3d)
+
+            # Combine and show
             combined = np.hstack((drawnR, drawnL))
             rgb_resized = cv2.resize(combined, (0, 0), fx=0.3, fy=0.3)
 
