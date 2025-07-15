@@ -5,7 +5,7 @@ from src.eye_tracking.human_interface.base_zaber_human_interface import BaseZabe
 from src.eye_tracking.human_interface.zaber_human_interface_dummy import ZaberHumanInterfaceDummy
 from src.eye_tracking.pupil_detection_laser_focus import PupilDetection
 from src.eye_tracking.human_interface.dummy_allied_vision import DummyMakoCamera
-from src.eye_tracking.human_interface.allied_vision import AlliedVisionCamera
+#from src.eye_tracking.human_interface.allied_vision import AlliedVisionCamera
 from src.eye_tracking.laser_focus_visualizer import LaserFocusVisualizer
 
 from PyQt5.QtGui import QPixmap, QDoubleValidator, QImage
@@ -13,7 +13,7 @@ from PyQt5.QtCore import QMutex
 
 
 class HumanInterfaceManager:
-    def __init__(self, use_dummy=False):
+    def __init__(self, use_dummy=True):
         if use_dummy:
             from src.eye_tracking.human_interface.zaber_human_interface_dummy import ZaberHumanInterfaceDummy as Zaber
         else:
@@ -27,7 +27,7 @@ class HumanInterfaceManager:
         self.ellipse = None
 
         #DummyMakoCamera or #AlliedVisionCamera
-        self.camera = AlliedVisionCamera()
+        self.camera = DummyMakoCamera()
         self.latest_frame = None
 
         self.camera.set_roi(0, 0, 2048, 2048)
