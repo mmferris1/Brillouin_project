@@ -4,26 +4,26 @@ import numpy as np
 from stereocalibrator import StereoCalibrator
 from src.eye_tracking.pupil_detection_laser_focus import PupilDetection
 
-def annotate_image(img, center, point_3d):
+def annotate_image(img, center, point_3d=None):
     h, w = img.shape[:2]
-
-    # show red dot at detected pupil center
     center_int = tuple(map(int, center))
-    cv2.circle(img, center_int, 6, (0, 0, 255), -1)  #red
+    cv2.circle(img, center_int, 6, (0, 0, 255), -1)  # red dot
 
-    # show the triangulated 3D point
-    point_mm = point_3d * 1000
-    text = f"XYZ = ({point_mm[0]:.2f}, {point_mm[1]:.2f}, {point_mm[2]:.2f}) mm"
-    cv2.putText(
-        img, text,
-        org=(10, h - 10),
-        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-        fontScale=1.0,
-        color=(0, 255, 0),  #green
-        thickness=2,
-        lineType=cv2.LINE_AA
-    )
+    if point_3d is not None:
+        point_mm = point_3d * 1000
+        text = f"XYZ = ({point_mm[0]:.2f}, {point_mm[1]:.2f}, {point_mm[2]:.2f}) mm"
+        cv2.putText(
+            img, text,
+            org=(10, h - 10),
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+            fontScale=1.0,
+            color=(0, 255, 0),  # green
+            thickness=2,
+            lineType=cv2.LINE_AA
+        )
+
     return img
+
 
 def main():
     left_dir = "/Users/margaretferris/Desktop/dummyeye8/left"
@@ -89,7 +89,7 @@ def main():
         print(f"[RESULT] Frame {i} → 3D point: {point_3d}")
 
         drawnL = annotate_image(drawnL, centerL, point_3d)
-        drawnR = annotate_image(drawnR, centerR, point_3d)
+        drawnR = annotate_image(drawnR, centerR)
 
         combined = np.hstack((drawnR, drawnL))
         cv2.imshow(f"Pupil Detection Frame {i}", combined)
