@@ -95,10 +95,27 @@ class LivePupilGUI(QWidget):
 
             pts1 = np.array([centerL], dtype=np.float32)
             pts2 = np.array([centerR], dtype=np.float32)
-            point_3d = self.calibrator.triangulate(pts1, pts2)
 
-            drawnL = annotate_image(drawnL, centerL, point_3d[0])
-            drawnR = annotate_image(drawnR, centerR, point_3d[0])
+            # Get rectification transforms
+            R1 = self.calibrator.R1
+            R2 = self.calibrator.R2
+            P1 = self.calibrator.P1
+            P2 = self.calibrator.P2
+            K1 = self.calibrator.cameraMatrix1
+            D1 = self.calibrator.distCoeffs1
+            K2 = self.calibrator.cameraMatrix2
+            D2 = self.calibrator.distCoeffs2
+
+            # Rectify pupil centers
+            pts1_rect = cv2.undistortPoints(np.expand_dims(pts1, axis=1), K1, D1, R=R1, P=P1)
+            pts2_rect = cv2.undistortPoints(np.expand_dims(pts2, axis=1), K2, D2, R=R2, P=P2)
+
+            # Triangulate
+            point_4d = cv2.triangulatePoints(P1, P2, pts1_rect, pts2_rect)
+            point_3d = (point_4d[:3] / point_4d[3]).reshape(-1)
+
+            drawnL = annotate_image(drawnL, centerL, point_3d)
+            drawnR = annotate_image(drawnR, centerR)
 
             def to_rgb(img):
                 if img.ndim == 2 or img.shape[2] == 1:

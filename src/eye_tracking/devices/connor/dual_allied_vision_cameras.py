@@ -1,7 +1,3 @@
-import queue
-import threading
-import time
-
 import cv2
 
 from src.eye_tracking.devices.connor.allied_vision_camera2 import AlliedVisionCamera
@@ -34,10 +30,10 @@ class DualAlliedVisionCameras:
 
         self.cam0 = AlliedVisionCamera(id=id0)
         self.cam1 = AlliedVisionCamera(id=id1)
-        self.cam0.set_roi(0, 0, 1024, 1024)
-        self.cam1.set_roi(0, 0, 1024, 1024)
-        #self.cam0.set_max_roi()
-        #self.cam1.set_max_roi()
+        #self.cam0.set_roi(345, 345, 990, 990)
+        #self.cam1.set_roi(345, 345, 990, 990)
+        self.cam0.set_max_roi()
+        self.cam1.set_max_roi()
 
         # Optimization settings for both cameras
         cams = [self.cam0.camera, self.cam1.camera]
@@ -70,8 +66,8 @@ class DualAlliedVisionCameras:
 
     def start_stream(self):
         """Start streaming once and keep queues ready."""
-        self.cam0.camera.start_streaming(_handler0, buffer_count=10)
-        self.cam1.camera.start_streaming(_handler1, buffer_count=10)
+        self.cam0.camera.start_streaming(_handler0, buffer_count=20)
+        self.cam1.camera.start_streaming(_handler1, buffer_count=20)
         time.sleep(1)  # Let the queues settle
 
     def stop_stream(self):

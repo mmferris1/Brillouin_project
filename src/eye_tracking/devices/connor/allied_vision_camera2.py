@@ -198,4 +198,3 @@ class AlliedVisionCamera():
             self.stop_stream()
         self.stack.close()
         print("[AVCamera] Camera and Vimba shut down.")
-
