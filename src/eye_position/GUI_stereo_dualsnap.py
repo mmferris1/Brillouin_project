@@ -5,9 +5,6 @@ import numpy as np
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QPushButton
 from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtCore import QTimer
-from matplotlib.patches import Ellipse
-
-from src.eye_tracking.devices.connor.allied_vision_camera2 import AlliedVisionCamera
 from src.eye_position.triangulation_v3 import StereoCalibrator, annotate_image
 from src.eye_tracking.pupil_detection_laser_focus import PupilDetection
 
