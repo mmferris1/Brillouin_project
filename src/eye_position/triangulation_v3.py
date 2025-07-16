@@ -9,6 +9,7 @@ def annotate_image(img, center, point_3d=None):
     center_int = tuple(map(int, center))
     cv2.circle(img, center_int, 6, (0, 0, 255), -1)  # red dot
 
+
     if point_3d is not None:
         point_mm = point_3d * 1000
         text = f"XYZ = ({point_mm[0]:.2f}, {point_mm[1]:.2f}, {point_mm[2]:.2f}) mm"
