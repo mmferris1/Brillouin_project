@@ -5,6 +5,8 @@ import numpy as np
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QPushButton
 from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtCore import QTimer
+
+from src.eye_tracking.devices.connor.allied_vision_camera2 import AlliedVisionCamera
 from src.eye_position.triangulation_v3 import StereoCalibrator, annotate_image
 from src.eye_tracking.pupil_detection_laser_focus import PupilDetection
 
@@ -15,7 +17,7 @@ class LivePupilGUI(QWidget):
         self.setWindowTitle("Live Pupil Triangulation")
 
         # Load stereo calibration
-        calib = np.load("stereo_calibration2.npz")
+        calib = np.load("stereo_calibration.npz")
         K1, D1 = calib["K1"], calib["D1"]
         K2, D2 = calib["K2"], calib["D2"]
         R, T = calib["R"], calib["T"]
@@ -54,6 +56,7 @@ class LivePupilGUI(QWidget):
         self.start_button.clicked.connect(self.start_loop)
         self.stop_button.clicked.connect(self.stop_loop)
 
+
     def start_loop(self):
         self.timer.start(200)
         self.start_button.setEnabled(False)
@@ -76,54 +79,50 @@ class LivePupilGUI(QWidget):
                 self.image_label.setText("Incomplete frame received.")
                 return
 
-            imgL = f0.as_numpy_ndarray()
-            imgR = f1.as_numpy_ndarray()
+            imgR = f0.as_numpy_ndarray()
+            imgL = f1.as_numpy_ndarray()
 
-            print(f"[DEBUG] imgL shape: {imgL.shape}, imgR shape: {imgR.shape}")
-
-            # Pupil detection
+            # Attempt pupil detection
             resultL = self.detector.DetectPupil(imgL, radiusGuess=80)
             resultR = self.detector.DetectPupil(imgR, radiusGuess=80)
 
-            if not resultL or not resultR:
-                self.image_label.setText("Pupil not detected in one or both images.")
-                return
+            if resultL:
+                drawnL, centerL, _, _ = resultL
+                drawnL = cv2.cvtColor(drawnL, cv2.COLOR_GRAY2RGB) if drawnL.ndim == 2 else drawnL
+            else:
+                drawnL = cv2.cvtColor(imgL.copy(), cv2.COLOR_GRAY2RGB) if imgL.ndim == 2 else imgL.copy()
 
-            drawnL, centerL, _, _ = resultL
-            drawnR, centerR, _, _ = resultR
+            if resultR:
+                drawnR, centerR, _, _ = resultR
+                drawnR = cv2.cvtColor(drawnR, cv2.COLOR_GRAY2RGB) if drawnR.ndim == 2 else drawnR
+            else:
+                drawnR = cv2.cvtColor(imgR.copy(), cv2.COLOR_GRAY2RGB) if imgR.ndim == 2 else imgR.copy()
 
-            pts1 = np.array([centerL], dtype=np.float32)
-            pts2 = np.array([centerR], dtype=np.float32)
+            # If both pupils found, perform triangulation and update left image with 3D point
+            if resultL and resultR:
+                centerL = resultL[1]
+                centerR = resultR[1]
+                pts1 = np.array([centerL], dtype=np.float32)
+                pts2 = np.array([centerR], dtype=np.float32)
 
-            # Get rectification transforms
-            R1 = self.calibrator.R1
-            R2 = self.calibrator.R2
-            P1 = self.calibrator.P1
-            P2 = self.calibrator.P2
-            K1 = self.calibrator.cameraMatrix1
-            D1 = self.calibrator.distCoeffs1
-            K2 = self.calibrator.cameraMatrix2
-            D2 = self.calibrator.distCoeffs2
+                R1 = self.calibrator.R1
+                R2 = self.calibrator.R2
+                P1 = self.calibrator.P1
+                P2 = self.calibrator.P2
+                K1 = self.calibrator.cameraMatrix1
+                D1 = self.calibrator.distCoeffs1
+                K2 = self.calibrator.cameraMatrix2
+                D2 = self.calibrator.distCoeffs2
 
-            # Rectify pupil centers
-            pts1_rect = cv2.undistortPoints(np.expand_dims(pts1, axis=1), K1, D1, R=R1, P=P1)
-            pts2_rect = cv2.undistortPoints(np.expand_dims(pts2, axis=1), K2, D2, R=R2, P=P2)
+                pts1_rect = cv2.undistortPoints(np.expand_dims(pts1, axis=1), K1, D1, R=R1, P=P1)
+                pts2_rect = cv2.undistortPoints(np.expand_dims(pts2, axis=1), K2, D2, R=R2, P=P2)
 
-            # Triangulate
-            point_4d = cv2.triangulatePoints(P1, P2, pts1_rect, pts2_rect)
-            point_3d = (point_4d[:3] / point_4d[3]).reshape(-1)
+                point_4d = cv2.triangulatePoints(P1, P2, pts1_rect, pts2_rect)
+                point_3d = (point_4d[:3] / point_4d[3]).reshape(-1)
 
-            drawnL = annotate_image(drawnL, centerL, point_3d)
-            drawnR = annotate_image(drawnR, centerR)
+                drawnL = annotate_image(drawnL, centerL, point_3d)
 
-            def to_rgb(img):
-                if img.ndim == 2 or img.shape[2] == 1:
-                    return cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-                return img
-
-            drawnL = to_rgb(drawnL)
-            drawnR = to_rgb(drawnR)
-
+            # Combine and show
             combined = np.hstack((drawnR, drawnL))
             rgb_resized = cv2.resize(combined, (0, 0), fx=0.3, fy=0.3)
 
@@ -132,6 +131,12 @@ class LivePupilGUI(QWidget):
             qt_image = QImage(rgb_resized.data, w, h, bytes_per_line, QImage.Format_RGB888)
 
             self.image_label.setPixmap(QPixmap.fromImage(qt_image))
+
+
+            # x, y, z = point_3d
+            #
+            # with open("triangulation_results.csv", "a") as f:
+            #     f.write(f"{x:.6f},{y:.6f},{z:.6f}\n")
 
         except Exception as e:
             self.image_label.setText(f"[ERROR] {str(e)}")
@@ -155,3 +160,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -30,10 +30,10 @@ class DualAlliedVisionCameras:
 
         self.cam0 = AlliedVisionCamera(id=id0)
         self.cam1 = AlliedVisionCamera(id=id1)
-        #self.cam0.set_roi(345, 345, 990, 990)
-        #self.cam1.set_roi(345, 345, 990, 990)
-        self.cam0.set_max_roi()
-        self.cam1.set_max_roi()
+        self.cam0.set_roi(500, 500, 1048, 1048)
+        self.cam1.set_roi(500, 500, 1048, 1048)
+        #self.cam0.set_max_roi()
+        #self.cam1.set_max_roi()
 
         # Optimization settings for both cameras
         cams = [self.cam0.camera, self.cam1.camera]
