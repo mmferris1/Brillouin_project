@@ -4,7 +4,7 @@ import numpy as np
 from eye_tracking.devices.allied_vision_camera import AlliedVisionCamera
 
 SAVE_DIR = r"C:\Users\Mandelstam\Documents\Connor\data\2025-6-5\take8"
-NUM_FRAMES = 30
+NUM_FRAMES = 10
 
 
 DISPLAY_SCALE = 0.4  # Resize factor for display

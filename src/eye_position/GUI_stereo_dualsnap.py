@@ -133,10 +133,10 @@ class LivePupilGUI(QWidget):
             self.image_label.setPixmap(QPixmap.fromImage(qt_image))
 
 
-            # x, y, z = point_3d
-            #
-            # with open("triangulation_results.csv", "a") as f:
-            #     f.write(f"{x:.6f},{y:.6f},{z:.6f}\n")
+            x, y, z = point_3d
+
+            with open("z_.csv", "a") as f:
+                f.write(f"{x:.6f},{y:.6f},{z:.6f}\n")
 
         except Exception as e:
             self.image_label.setText(f"[ERROR] {str(e)}")

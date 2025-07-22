@@ -7,7 +7,7 @@ from src.eye_tracking.pupil_detection_laser_focus import PupilDetection
 def annotate_image(img, center, point_3d=None):
     h, w = img.shape[:2]
     center_int = tuple(map(int, center))
-    cv2.circle(img, center_int, 6, (0, 0, 255), -1)  # red dot
+    cv2.circle(img, center_int, 6, (0, 255, 0), -1)  # red dot
 
 
     if point_3d is not None:
