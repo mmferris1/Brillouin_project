@@ -6,31 +6,31 @@ from scipy.spatial import cKDTree
 import matplotlib.image as mpimg
 
 # === Load and plot background image ===
-img_path = Path("/Users/margaretferris/Desktop/grayscale_eye_cropped_to_bounding_box.png")
-eye_img = mpimg.imread(img_path)
+#img_path = Path("/Users/margaretferris/Desktop/grayscale_eye_cropped_to_bounding_box.png")
+#eye_img = mpimg.imread(img_path)
 
 # === Control these parameters ===
-image_opacity = 0.4             # 0 = transparent, 1 = opaque
-image_width_mm = 19             # Desired image width in mm
-x_shift_mm = 1.6  # shift image 1 mm to the left (adjust as needed)
+#image_opacity = 0.4             # 0 = transparent, 1 = opaque
+#image_width_mm = 19             # Desired image width in mm
+#x_shift_mm = 1.6  # shift image 1 mm to the left (adjust as needed)
 
 
 # === Load image and compute its true aspect ratio ===
-eye_img = mpimg.imread(img_path)
-img_height_px, img_width_px = eye_img.shape[:2]
-aspect_ratio = img_height_px / img_width_px
-image_height_mm = image_width_mm * aspect_ratio
+#eye_img = mpimg.imread(img_path)
+#img_height_px, img_width_px = eye_img.shape[:2]
+#aspect_ratio = img_height_px / img_width_px
+#image_height_mm = image_width_mm * aspect_ratio
 
 # === Image extent in mm, centered at (0, 0) ===
-img_extent = [
-    -image_width_mm / 2 + x_shift_mm, image_width_mm / 2 + x_shift_mm,
-    -image_height_mm / 2, image_height_mm / 2
-]
-
+# img_extent = [
+#     -image_width_mm / 2 + x_shift_mm, image_width_mm / 2 + x_shift_mm,
+#     -image_height_mm / 2, image_height_mm / 2
+# ]
+#
 
 # === CONFIG ===
 SCRIPT_DIR = Path(__file__).resolve().parent
-CSV_FILES = list(SCRIPT_DIR.glob("circlexy_*.csv"))
+CSV_FILES = list(SCRIPT_DIR.glob("xy_*.csv"))
 
 if not CSV_FILES:
     print("No CSV files found.")
@@ -42,9 +42,9 @@ mean_points = []
 for file in CSV_FILES:
     try:
         df = pd.read_csv(file, header=None)
-        if df.shape[1] != 5:
+        if df.shape[1] != 3:
             raise ValueError("Expected 5 columns")
-        df.columns = ["x_measured", "y_measured", "z", "x_true", "y_true"]
+        df.columns = ["x_measured", "y_measured", "z"]
 
         # Convert from meters to millimeters
         df[["x_measured", "y_measured"]] *= 1000
@@ -62,11 +62,12 @@ for file in CSV_FILES:
 
 # === Compute global center to shift to (0, 0) ===
 all_x, all_y, all_x_std, all_y_std = zip(*mean_points)
-x_center = sum(all_x) / len(all_x)
-y_center = sum(all_y) / len(all_y)
+x_ref = all_x[0]  # First point’s measured x
+y_ref = all_y[0]  # First point’s measured y
 
-x_shifted = [x - x_center for x in all_x]
-y_shifted = [y - y_center for y in all_y]
+x_shifted = [x - x_ref for x in all_x]
+y_shifted = [y - y_ref for y in all_y]
+
 x_stds = list(all_x_std)
 y_stds = list(all_y_std)
 
@@ -175,7 +176,7 @@ ax.set_xlim(-max_radius, max_radius)
 ax.set_ylim(-max_radius, max_radius)
 
 # === Display the image underneath ===
-ax.imshow(eye_img, extent=img_extent, alpha=image_opacity, zorder=0)
+#ax.imshow(eye_img, extent=img_extent, alpha=image_opacity, zorder=0)
 
 # === Axis formatting ===
 for spine in ['top', 'right']:

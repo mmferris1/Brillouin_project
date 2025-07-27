@@ -1,8 +1,9 @@
 import sys
 import time
+import os
 import cv2
 import numpy as np
-from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QPushButton
+from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QPushButton, QFileDialog
 from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtCore import QTimer
 
@@ -33,7 +34,6 @@ class LivePupilGUI(QWidget):
 
         self.detector = PupilDetection()
 
-        # ✅ Use the stereo camera wrapper
         from src.eye_tracking.devices.connor.dual_allied_vision_cameras import DualAlliedVisionCameras
         self.cams = DualAlliedVisionCameras()
 
@@ -41,12 +41,14 @@ class LivePupilGUI(QWidget):
         self.image_label = QLabel("Waiting for data...")
         self.start_button = QPushButton("Start")
         self.stop_button = QPushButton("Stop")
+        self.save_button = QPushButton("Save Snap")  # <-- NEW BUTTON
         self.stop_button.setEnabled(False)
 
         layout = QVBoxLayout()
         layout.addWidget(self.image_label)
         layout.addWidget(self.start_button)
         layout.addWidget(self.stop_button)
+        layout.addWidget(self.save_button)  # <-- ADD TO LAYOUT
         self.setLayout(layout)
 
         # Timer and buttons
@@ -55,6 +57,59 @@ class LivePupilGUI(QWidget):
 
         self.start_button.clicked.connect(self.start_loop)
         self.stop_button.clicked.connect(self.stop_loop)
+        self.save_button.clicked.connect(self.save_snap)  # <-- CONNECT TO METHOD
+
+        self.logging_enabled = False
+        self.log_file = None
+        self.log_button = QPushButton("Start Logging")
+        layout.addWidget(self.log_button)
+        self.log_button.clicked.connect(self.toggle_logging)
+
+    def toggle_logging(self):
+        self.logging_enabled = not self.logging_enabled
+
+        if self.logging_enabled:
+            # Find next available file
+            i = 1
+            while os.path.exists(f"xy_{i}.csv"):
+                i += 1
+            self.log_file = open(f"xy_{i}.csv", "w")
+            self.log_button.setText("Stop Logging")
+            self.image_label.setText(f"Logging to xy_{i}.csv")
+        else:
+            if self.log_file:
+                self.log_file.close()
+                self.log_file = None
+            self.log_button.setText("Start Logging")
+            self.image_label.setText("Stopped logging.")
+
+    def save_snap(self):
+        try:
+            folder = QFileDialog.getExistingDirectory(self, "Select Save Directory")
+            if not folder:
+                return  # User canceled
+
+            f0, f1 = self.cams.snap_once()
+
+            if f0.get_status() != 0 or f1.get_status() != 0:
+                self.image_label.setText("Incomplete frame received.")
+                return
+
+            imgR = f0.as_numpy_ndarray()
+            imgL = f1.as_numpy_ndarray()
+
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            filenameL = os.path.join(folder, f"left_{timestamp}.png")
+            filenameR = os.path.join(folder, f"right_{timestamp}.png")
+
+            cv2.imwrite(filenameL, imgL)
+            cv2.imwrite(filenameR, imgR)
+
+            self.image_label.setText(f"Saved: {os.path.basename(filenameL)}, {os.path.basename(filenameR)}")
+
+        except Exception as e:
+            self.image_label.setText(f"[ERROR Saving Snap] {str(e)}")
+
 
 
     def start_loop(self):
@@ -99,28 +154,32 @@ class LivePupilGUI(QWidget):
                 drawnR = cv2.cvtColor(imgR.copy(), cv2.COLOR_GRAY2RGB) if imgR.ndim == 2 else imgR.copy()
 
             # If both pupils found, perform triangulation and update left image with 3D point
+            point_3d = None
+
             if resultL and resultR:
                 centerL = resultL[1]
                 centerR = resultR[1]
-                pts1 = np.array([centerL], dtype=np.float32)
-                pts2 = np.array([centerR], dtype=np.float32)
+                if not np.isnan(centerL[0]) and not np.isnan(centerL[1]) and not np.isnan(centerR[0]) and not np.isnan(
+                        centerR[1]):
+                    pts1 = np.array([centerL], dtype=np.float32)
+                    pts2 = np.array([centerR], dtype=np.float32)
 
-                R1 = self.calibrator.R1
-                R2 = self.calibrator.R2
-                P1 = self.calibrator.P1
-                P2 = self.calibrator.P2
-                K1 = self.calibrator.cameraMatrix1
-                D1 = self.calibrator.distCoeffs1
-                K2 = self.calibrator.cameraMatrix2
-                D2 = self.calibrator.distCoeffs2
+                    R1 = self.calibrator.R1
+                    R2 = self.calibrator.R2
+                    P1 = self.calibrator.P1
+                    P2 = self.calibrator.P2
+                    K1 = self.calibrator.cameraMatrix1
+                    D1 = self.calibrator.distCoeffs1
+                    K2 = self.calibrator.cameraMatrix2
+                    D2 = self.calibrator.distCoeffs2
 
-                pts1_rect = cv2.undistortPoints(np.expand_dims(pts1, axis=1), K1, D1, R=R1, P=P1)
-                pts2_rect = cv2.undistortPoints(np.expand_dims(pts2, axis=1), K2, D2, R=R2, P=P2)
+                    pts1_rect = cv2.undistortPoints(np.expand_dims(pts1, axis=1), K1, D1, R=R1, P=P1)
+                    pts2_rect = cv2.undistortPoints(np.expand_dims(pts2, axis=1), K2, D2, R=R2, P=P2)
 
-                point_4d = cv2.triangulatePoints(P1, P2, pts1_rect, pts2_rect)
-                point_3d = (point_4d[:3] / point_4d[3]).reshape(-1)
+                    point_4d = cv2.triangulatePoints(P1, P2, pts1_rect, pts2_rect)
+                    point_3d = (point_4d[:3] / point_4d[3]).reshape(-1)
 
-                drawnL = annotate_image(drawnL, centerL, point_3d)
+                    drawnL = annotate_image(drawnL, centerL, point_3d)
 
             # Combine and show
             combined = np.hstack((drawnR, drawnL))
@@ -129,14 +188,15 @@ class LivePupilGUI(QWidget):
             h, w, ch = rgb_resized.shape
             bytes_per_line = ch * w
             qt_image = QImage(rgb_resized.data, w, h, bytes_per_line, QImage.Format_RGB888)
-
             self.image_label.setPixmap(QPixmap.fromImage(qt_image))
 
+            # Only write 3D point if it was successfully computed
+            if point_3d is not None:
+                x, y, z = point_3d
+                if self.logging_enabled and self.log_file:
+                    self.log_file.write(f"{x:.6f},{y:.6f},{z:.6f}\n")
+                    self.log_file.flush()
 
-            x, y, z = point_3d
-
-            with open("z_.csv", "a") as f:
-                f.write(f"{x:.6f},{y:.6f},{z:.6f}\n")
 
         except Exception as e:
             self.image_label.setText(f"[ERROR] {str(e)}")

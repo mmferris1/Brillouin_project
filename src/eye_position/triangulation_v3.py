@@ -29,7 +29,7 @@ def annotate_image(img, center, point_3d=None):
 def main():
     left_dir = "/Users/margaretferris/Desktop/dummyeye8/left"
     right_dir = "/Users/margaretferris/Desktop/dummyeye8/right"
-    calib_file = "stereo_calibration2.npz"
+    calib_file = "stereo_calibration.npz"
 
     # Load calibration
     calib = np.load(calib_file)

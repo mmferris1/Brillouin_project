@@ -4,8 +4,8 @@ from src.eye_position.stereocalibrator import StereoCalibrator
 
 def main():
     calibrator = StereoCalibrator(
-        left_dir=r"C:\Users\Mandelstam\Documents\Connor\data\2025-6-5\take8\left",
-        right_dir=r"C:\Users\Mandelstam\Documents\Connor\data\2025-6-5\take8\right",
+        left_dir=r"C:\Users\Mandelstam\Documents\Connor\data\2025-6-5\postercalib\left",
+        right_dir=r"C:\Users\Mandelstam\Documents\Connor\data\2025-6-5\postercalib\right",
         pattern_size=(8, 6),
         square_size=0.0025
     )
