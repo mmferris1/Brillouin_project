@@ -90,11 +90,11 @@ fig, ax = plt.subplots(figsize=(6, 6))
 ax.set_aspect("equal")
 
 # === Plot measured points and reference dots ===
-scatter_measured = ax.scatter(x_shifted, y_shifted, color="blue", label="Mean Measured Points", s=2)
+scatter_measured = ax.scatter(x_shifted, y_shifted, color="blue", label="Mean Measured Points", s=10)
 scatter_reference = ax.scatter(ref_x, ref_y, color="red", label="Reference Grid", s=5, zorder=3)
 
 for x, y, x_err, y_err in zip(x_shifted, y_shifted, x_stds, y_stds):
-    ax.errorbar(x, y, xerr=2*x_err, yerr=2*y_err, fmt='none', ecolor='blue', alpha=0.6, capsize=0, zorder=2)
+    ax.errorbar(x, y, xerr=2*x_err, yerr=2*y_err, fmt='none', ecolor='black', alpha=0.6, capsize=1, zorder=4)
 
 # Add legend
 ax.legend(loc="upper right", frameon=True)
@@ -187,6 +187,8 @@ ax.spines['bottom'].set_position(('outward', 10))
 ax.tick_params(axis='both', direction='out', length=4)
 ax.set_xlabel("X distance (mm)", labelpad=10)
 ax.set_ylabel("Y distance (mm)", labelpad=10)
+ax.set_title("Relative X-Y Location")
+
 ax.grid(False)
 
 plt.tight_layout()

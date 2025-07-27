@@ -1,12 +1,14 @@
-import time
+import math
 
-from eye_tracking.devices.connor.dual_allied_vision_cameras import DualAlliedVisionCameras
+# === Parameters ===
+radius = 1
+center_x = 10
+center_y = 10
 
-cams = DualAlliedVisionCameras()
-cams.start_stream()
-time.sleep(1)  # allow frames to flow
-f0, f1 = cams.get_latest_frames()
-img0 = f0.as_numpy_ndarray()
-img1 = f1.as_numpy_ndarray()
-print("Cam0:", img0.shape, "Cam1:", img1.shape)
-cams.close()
+angles_deg = [0, 45, 90, 135, 180, 225, 270, 315]
+
+for angle_deg in angles_deg:
+    angle_rad = math.radians(angle_deg)
+    x = center_x + radius * math.cos(angle_rad)
+    y = center_y + radius * math.sin(angle_rad)
+    print(f"Angle {angle_deg}° → x = {x:.6f}, y = {y:.6f}")

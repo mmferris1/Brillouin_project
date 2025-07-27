@@ -11,7 +11,7 @@ class PupilDetection:
 
         self.kernel_size = (5, 5) #Size of the kernel for morphological operations (close/open)
         self.inpaint_radius = 3 #Radius for inpainting glint artifacts
-        self.threshold_offset = 5 #added to the quantile-based threshold for binarizing the pupil
+        self.threshold_offset = 40 #added to the quantile-based threshold for binarizing the pupil
         # originally +5 (probably for with near IR light
         self.blur_ksize = 5 #Kernel size for median blur (smoothing before thresholding)
 
