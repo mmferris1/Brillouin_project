@@ -65,8 +65,15 @@ all_x, all_y, all_x_std, all_y_std = zip(*mean_points)
 x_ref = all_x[0]  # First point’s measured x
 y_ref = all_y[0]  # First point’s measured y
 
-x_shifted = [x - x_ref for x in all_x]
-y_shifted = [y - y_ref for y in all_y]
+x_shifted = [0]  # First point stays at origin
+y_shifted = [0]
+
+for i in range(1, len(all_x)):
+    dx = all_x[i] - all_x[i - 1]
+    dy = all_y[i] - all_y[i - 1]
+    x_shifted.append(x_shifted[-1] + dx)
+    y_shifted.append(y_shifted[-1] + dy)
+
 
 x_stds = list(all_x_std)
 y_stds = list(all_y_std)
@@ -93,6 +100,8 @@ ax.set_aspect("equal")
 # === Plot measured points and reference dots ===
 scatter_measured = ax.scatter(x_shifted, y_shifted, color="blue", label="Mean Measured Points", s=10)
 scatter_reference = ax.scatter(ref_x, ref_y, color="red", label="Reference Grid", s=5, zorder=3)
+
+
 
 for x, y, x_err, y_err in zip(x_shifted, y_shifted, x_stds, y_stds):
     ax.errorbar(x, y, xerr=2*x_err, yerr=2*y_err, fmt='none', ecolor='black', alpha=0.6, capsize=1, zorder=4)
@@ -186,9 +195,10 @@ ax.spines['left'].set_position(('outward', 10))
 ax.spines['bottom'].set_position(('outward', 10))
 
 ax.tick_params(axis='both', direction='out', length=4)
-ax.set_xlabel("X distance (mm)", labelpad=10)
-ax.set_ylabel("Y distance (mm)", labelpad=10)
-ax.set_title("Relative X-Y Location")
+ax.set_xlabel("X distance (mm)", fontsize=14, labelpad=10)
+ax.set_ylabel("Y distance (mm)", fontsize=14, labelpad=10)
+
+ax.set_title("Relative X-Y Location", fontsize=20)
 
 ax.grid(False)
 
