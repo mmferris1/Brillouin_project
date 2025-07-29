@@ -100,7 +100,7 @@ class OrloskyGUI(QWidget):
             combined = np.hstack((imgR, imgL))  # now safe
             rgb = combined  # already in RGB format
 
-            scale = 0.3  # adjust for GUI size
+            scale = 0.3  # adjust for gui size
             rgb_resized = cv2.resize(rgb, (0, 0), fx=scale, fy=scale)
 
             h, w, ch = rgb_resized.shape

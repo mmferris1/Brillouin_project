@@ -6,27 +6,27 @@ from scipy.spatial import cKDTree
 import matplotlib.image as mpimg
 
 # === Load and plot background image ===
-#img_path = Path("/Users/margaretferris/Desktop/grayscale_eye_cropped_to_bounding_box.png")
-#eye_img = mpimg.imread(img_path)
+img_path = Path("/Users/margaretferris/Desktop/grayscale_eye_cropped_to_bounding_box.png")
+eye_img = mpimg.imread(img_path)
 
 # === Control these parameters ===
-#image_opacity = 0.4             # 0 = transparent, 1 = opaque
-#image_width_mm = 19             # Desired image width in mm
-#x_shift_mm = 1.6  # shift image 1 mm to the left (adjust as needed)
+image_opacity = 0.4             # 0 = transparent, 1 = opaque
+image_width_mm = 19             # Desired image width in mm
+x_shift_mm = 1.6  # shift image 1 mm to the left (adjust as needed)
 
 
 # === Load image and compute its true aspect ratio ===
-#eye_img = mpimg.imread(img_path)
-#img_height_px, img_width_px = eye_img.shape[:2]
-#aspect_ratio = img_height_px / img_width_px
-#image_height_mm = image_width_mm * aspect_ratio
+eye_img = mpimg.imread(img_path)
+img_height_px, img_width_px = eye_img.shape[:2]
+aspect_ratio = img_height_px / img_width_px
+image_height_mm = image_width_mm * aspect_ratio
 
 # === Image extent in mm, centered at (0, 0) ===
-# img_extent = [
-#     -image_width_mm / 2 + x_shift_mm, image_width_mm / 2 + x_shift_mm,
-#     -image_height_mm / 2, image_height_mm / 2
-# ]
-#
+img_extent = [
+    -image_width_mm / 2 + x_shift_mm, image_width_mm / 2 + x_shift_mm,
+    -image_height_mm / 2, image_height_mm / 2
+]
+
 
 # === CONFIG ===
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -68,11 +68,9 @@ y_ref = all_y[0]  # First point’s measured y
 x_shifted = [0]  # First point stays at origin
 y_shifted = [0]
 
-for i in range(1, len(all_x)):
-    dx = all_x[i] - all_x[i - 1]
-    dy = all_y[i] - all_y[i - 1]
-    x_shifted.append(x_shifted[-1] + dx)
-    y_shifted.append(y_shifted[-1] + dy)
+# === Center measured points around the mean ===
+x_shifted = [x - np.mean(all_x) for x in all_x]
+y_shifted = [y - np.mean(all_y) for y in all_y]
 
 
 x_stds = list(all_x_std)
@@ -185,7 +183,7 @@ ax.set_xlim(-max_radius, max_radius)
 ax.set_ylim(-max_radius, max_radius)
 
 # === Display the image underneath ===
-#ax.imshow(eye_img, extent=img_extent, alpha=image_opacity, zorder=0)
+ax.imshow(eye_img, extent=img_extent, alpha=image_opacity, zorder=0)
 
 # === Axis formatting ===
 for spine in ['top', 'right']:
@@ -198,7 +196,7 @@ ax.tick_params(axis='both', direction='out', length=4)
 ax.set_xlabel("X distance (mm)", fontsize=14, labelpad=10)
 ax.set_ylabel("Y distance (mm)", fontsize=14, labelpad=10)
 
-ax.set_title("Relative X-Y Location", fontsize=20)
+ax.set_title(" X-Y Location", fontsize=20)
 
 ax.grid(False)
 

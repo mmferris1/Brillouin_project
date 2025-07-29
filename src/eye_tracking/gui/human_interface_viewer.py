@@ -13,7 +13,7 @@ class HumanInterfaceViewer(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Human Interface GUI")
+        self.setWindowTitle("Human Interface gui")
         manager = HumanInterfaceManager()
         self.signaller = HumanInterfaceSignaller(manager)
 

@@ -41,7 +41,7 @@ class LivePupilGUI(QWidget):
         from src.eye_tracking.devices.connor.dual_allied_vision_cameras import DualAlliedVisionCameras
         self.cams = DualAlliedVisionCameras()
 
-        # GUI layout
+        # gui layout
         self.image_label = QLabel("Waiting for data...")
         self.start_button = QPushButton("Start")
         self.stop_button = QPushButton("Stop")
@@ -165,7 +165,7 @@ def main():
     window = LivePupilGUI()
     window.resize(1000, 200)
     window.show()
-    print("[DEBUG] GUI running event loop")
+    print("[DEBUG] gui running event loop")
     app.exec_()
     print("[DEBUG] Event loop exited")
 

@@ -90,8 +90,8 @@ for x in range(min(expected_positions), max(expected_positions) + 3):
 
 # === Formatting ===
 ax.set_yticks([])
-ax.set_xlabel("Z Position Relative to 0 (mm)")
-ax.set_title("Relative Z location ")
+ax.set_xlabel("Z distance (mm)")
+ax.set_title("Z Location ")
 ax.set_xlim(x_min, x_max)
 ax.set_xticks(np.arange(np.floor(x_min), np.ceil(x_max) + 1, 1))  # whole numbers
 

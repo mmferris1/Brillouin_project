@@ -871,7 +871,7 @@ def process_video():
     cv2.destroyAllWindows()
 
 
-# GUI for selecting camera or video
+# gui for selecting camera or video
 def selection_gui():
     global selected_camera
     cameras = detect_cameras()
@@ -899,6 +899,6 @@ def selection_gui():
     root.mainloop()
 
 
-# Run GUI to select camera or video
+# Run gui to select camera or video
 if __name__ == "__main__":
     selection_gui()
