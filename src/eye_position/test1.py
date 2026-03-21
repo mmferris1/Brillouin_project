@@ -1,9 +1,9 @@
 import math
 
 # === Parameters ===
-radius = 1
-center_x = 10
-center_y = 10
+radius = 3
+center_x = 0
+center_y = 0
 
 angles_deg = [0, 45, 90, 135, 180, 225, 270, 315]
 

@@ -1,0 +1,244 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from pathlib import Path
+import numpy as np
+import re
+from matplotlib.patches import Circle
+
+# === CONFIG ===
+CSV_DIR = Path("/Users/margotferris/Desktop/repo/Brillouin_project/src/eye_position/xy_data/RealEye2")
+CSV_FILES = list(CSV_DIR.glob("xy_*.csv"))
+
+if not CSV_FILES:
+    print("No CSV files found.")
+    raise SystemExit
+
+# --- Filename parser: supports things like xy_-0.707_.707 ---
+_num = r"-?(?:\d+(?:\.\d+)?|\.\d+)"
+pat = re.compile(rf"^xy_({_num})_({_num})$")
+
+records = []
+all_points = []
+
+# === Load each file: each file contains MULTIPLE x,y measurements ===
+for file in CSV_FILES:
+    try:
+        m = pat.fullmatch(file.stem)
+        if not m:
+            raise ValueError(f"Filename does not match expected pattern xy_<x>_<y>: {file.stem}")
+
+        x_ref = float(m.group(1))
+        y_ref = float(m.group(2))
+
+        df = pd.read_csv(file, header=None)
+
+        if df.shape[1] < 2:
+            raise ValueError("Expected at least 2 columns: x, y")
+
+        # Convert first two columns to numeric and drop bad rows
+        x_vals = pd.to_numeric(df.iloc[:, 0], errors="coerce")
+        y_vals = pd.to_numeric(df.iloc[:, 1], errors="coerce")
+
+        valid = ~(x_vals.isna() | y_vals.isna())
+        x_vals = x_vals[valid].to_numpy(dtype=float)
+        y_vals = y_vals[valid].to_numpy(dtype=float)
+
+        if len(x_vals) == 0:
+            raise ValueError("No valid x,y measurements found in file")
+
+        # Compute mean and std from all measurements in file
+        x_meas = np.mean(x_vals)
+        y_meas = np.mean(y_vals)
+
+        # sample std if multiple points, otherwise 0
+        x_std = np.std(x_vals, ddof=1) if len(x_vals) > 1 else 0.0
+        y_std = np.std(y_vals, ddof=1) if len(y_vals) > 1 else 0.0
+
+        dx = x_meas - x_ref
+        dy = y_meas - y_ref
+        err = np.hypot(dx, dy)
+        r_ref = np.hypot(x_ref, y_ref)
+
+        records.append({
+            "file": file.name,
+            "n_points": len(x_vals),
+            "x_ref": x_ref,
+            "y_ref": y_ref,
+            "x_meas": x_meas,
+            "y_meas": y_meas,
+            "x_std": x_std,
+            "y_std": y_std,
+            "dx": dx,
+            "dy": dy,
+            "error": err,
+            "r_ref": r_ref,
+        })
+
+        # save all raw points for plotting
+        for xv, yv in zip(x_vals, y_vals):
+            all_points.append({
+                "file": file.name,
+                "x_ref": x_ref,
+                "y_ref": y_ref,
+                "x": xv,
+                "y": yv
+            })
+
+    except Exception as e:
+        print(f"[WARNING] Skipped {file.name}: {e}")
+
+if not records:
+    print("No valid files parsed.")
+    raise SystemExit
+
+df_all = pd.DataFrame(records)
+df_points = pd.DataFrame(all_points)
+
+# === Print individual errors ===
+print("\nErrors between measured mean and filename reference points:")
+for i, row in df_all.reset_index(drop=True).iterrows():
+    print(
+        f"Point {i+1:2d}: Error = {row['error']:.4f} mm | "
+        f"Measured mean = [{row['x_meas']:.4f}, {row['y_meas']:.4f}], "
+        f"Ref = [{row['x_ref']:.4f}, {row['y_ref']:.4f}] | "
+        f"x_std = {row['x_std']:.4f}, y_std = {row['y_std']:.4f} | "
+        f"n = {int(row['n_points'])} | "
+        f"dx = {row['dx']:.4f}, dy = {row['dy']:.4f}"
+    )
+
+# === Summary statistics ===
+errors = df_all["error"].to_numpy()
+print("\nSummary statistics:")
+print(f"  Mean error:     {np.mean(errors):.4f} mm")
+print(f"  Max error:      {np.max(errors):.4f} mm")
+print(f"  Std deviation:  {np.std(errors):.4f} mm")
+
+# === Mean error per radial mm (error / radius), excluding r=0 ===
+nonzero = df_all["r_ref"].to_numpy() > 0
+normalized_errors = df_all.loc[nonzero, "error"].to_numpy() / df_all.loc[nonzero, "r_ref"].to_numpy()
+
+if normalized_errors.size:
+    mean_relative_error = np.mean(normalized_errors)
+    print(f"\nThe error for each mm is approximately {mean_relative_error:.4f} mm/mm")
+else:
+    print("\nNo nonzero-radius reference points; cannot compute mm/mm normalization.")
+
+# === Compute per-radius mean error ===
+radius_errors = {r: [] for r in [0, 1, 2, 3, 4]}
+for _, row in df_all.iterrows():
+    r_bucket = round(row["r_ref"])
+    if r_bucket in radius_errors:
+        radius_errors[r_bucket].append(row["error"])
+
+print("\nError by reference radius:")
+for r in sorted(radius_errors):
+    errs = radius_errors[r]
+    if errs:
+        print(f"  Radius {r} mm: Error = {np.mean(errs):.4f} mm")
+    else:
+        print(f"  Radius {r} mm: No points")
+
+# =========================
+# Plot
+# =========================
+fig, ax = plt.subplots(figsize=(6, 6))
+ax.set_aspect("equal")
+
+# --- Reference points FIRST (background) ---
+ax.scatter(
+    df_all["x_ref"], df_all["y_ref"],
+    color="red",
+    label="Reference points",
+    s=28,
+    zorder=1
+)
+
+# --- Raw measured points ON TOP ---
+ax.scatter(
+    df_points["x"], df_points["y"],
+    color="green",
+    s=10,
+    alpha=0.65,
+    label="All measured points",
+    zorder=3
+)
+
+# --- Mean measured points ON TOP ---
+ax.scatter(
+    df_all["x_meas"], df_all["y_meas"],
+    color="black",
+    label="Mean measured points",
+    s=10,
+    zorder=5
+)
+
+# --- Error bars ABOVE red, below mean ---
+ax.errorbar(
+    df_all["x_meas"], df_all["y_meas"],
+    xerr=df_all["x_std"], yerr=df_all["y_std"],
+    fmt="none",
+    ecolor="black",
+    elinewidth=1.2,
+    capsize=2,
+    alpha=0.9,
+    zorder=4
+)
+
+# Legend
+ax.legend(loc="upper right", frameon=True)
+
+# Axis limits
+max_radius = 3.5
+ax.set_xlim(-max_radius, max_radius)
+ax.set_ylim(-max_radius, max_radius)
+
+# =========================
+# Polar-style overlay: spokes + circles
+# =========================
+overlay_color = "grey"
+overlay_alpha = 0.6
+overlay_lw = 0.8
+reference_radii = [1, 2, 3]
+
+for r in reference_radii:
+    ax.add_patch(
+        Circle(
+            (0, 0), r,
+            fill=False,
+            edgecolor=overlay_color,
+            linewidth=overlay_lw,
+            linestyle="--",
+            alpha=overlay_alpha,
+            zorder=1
+        )
+    )
+
+spoke_angles_deg = [0, 45, 90, 135, 180, 225, 270, 315]
+R = max_radius
+for ang in spoke_angles_deg:
+    theta = np.deg2rad(ang)
+    ax.plot(
+        [0, R * np.cos(theta)],
+        [0, R * np.sin(theta)],
+        linestyle="--",
+        color=overlay_color,
+        linewidth=overlay_lw,
+        alpha=overlay_alpha,
+        zorder=1
+    )
+
+# Formatting
+for spine in ["top", "right"]:
+    ax.spines[spine].set_visible(False)
+
+ax.spines["left"].set_position(("outward", 10))
+ax.spines["bottom"].set_position(("outward", 10))
+
+ax.tick_params(axis="both", direction="out", length=4)
+ax.set_xlabel("X distance (mm)", fontsize=14, labelpad=10)
+ax.set_ylabel("Y distance (mm)", fontsize=14, labelpad=10)
+ax.set_title("X-Y Human Eye Accuracy Test", fontsize=20)
+ax.grid(False)
+
+plt.tight_layout()
+plt.show()

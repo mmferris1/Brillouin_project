@@ -1,5 +1,5 @@
 import cv2
-from print_pupil_detection import PupilDetection
+from pupil_detection_ellipse_points import PupilDetection
 
 def run_on_image(image_path, radius_guess=40):
     img = cv2.imread(image_path)
@@ -25,7 +25,7 @@ def run_on_image(image_path, radius_guess=40):
         exit()
 
 if __name__ == "__main__":
-    filename = f"/Users/margaretferris/Desktop/dummyeye/left/left_dummyeye_1.png"
+    filename = f"/Users/margotferris/Dropbox/Margot_Brillouin/eye_images/right/pair_0000_right.png"
     run_on_image(filename, radius_guess=40)
 
     cv2.destroyAllWindows()

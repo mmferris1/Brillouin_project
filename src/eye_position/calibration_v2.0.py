@@ -19,7 +19,7 @@ def main():
         Q = calibrator.compute_rectification()
 
         # Save all values
-        np.savez("stereo_calibration2.npz",
+        np.savez("stereo_calibration.npz",
                  K1=calibrator.cameraMatrix1, D1=calibrator.distCoeffs1,
                  K2=calibrator.cameraMatrix2, D2=calibrator.distCoeffs2,
                  R=calibrator.R, T=calibrator.T,
@@ -28,7 +28,7 @@ def main():
                  P1=calibrator.P1, P2=calibrator.P2,
                  Q=Q)
 
-        print("[INFO] Calibration results saved to stereo_calibration2.npz")
+        print("[INFO] Calibration results saved to stereo_calibration.npz")
 
 
     else:

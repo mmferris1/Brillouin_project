@@ -2,17 +2,17 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 import numpy as np
-from scipy.spatial import cKDTree
 import matplotlib.image as mpimg
+import re
 
 # === Load and plot background image ===
-img_path = Path("/Users/margaretferris/Desktop/grayscale_eye_cropped_to_bounding_box.png")
+img_path = Path("/Users/margotferris/Desktop/black-circle-hi.png")
 eye_img = mpimg.imread(img_path)
 
 # === Control these parameters ===
-image_opacity = 0.4             # 0 = transparent, 1 = opaque
-image_width_mm = 19             # Desired image width in mm
-x_shift_mm = 1.6  # shift image 1 mm to the left (adjust as needed)
+image_opacity = .9             # 0 = transparent, 1 = opaque
+image_width_mm = 7.5             # Desired image width in mm
+x_shift_mm = 0  # shift image 1 mm to the left (adjust as needed)
 
 
 # === Load image and compute its true aspect ratio ===
@@ -29,139 +29,101 @@ img_extent = [
 
 
 # === CONFIG ===
-SCRIPT_DIR = Path(__file__).resolve().parent
-CSV_FILES = list(SCRIPT_DIR.glob("xy_*.csv"))
+CSV_DIR = Path("/Users/margotferris/Desktop/repo/Brillouin_project/src/eye_position/xy_data/calibration1")  # <-- exact folder
+CSV_FILES = list(CSV_DIR.glob("xy_*.csv"))
+
 
 if not CSV_FILES:
     print("No CSV files found.")
     exit()
 
-mean_points = []
+# --- Filename parser: supports things like xy_-0.707_.707 (note: .707 w/o leading 0) ---
+_num = r"-?(?:\d+(?:\.\d+)?|\.\d+)"
+pat = re.compile(rf"^xy_({_num})_({_num})$")
 
-# === Load each file and compute its mean measured point ===
+records = []
+
+# === Load each file: first column is x mean, second column is y mean ===
 for file in CSV_FILES:
     try:
+        m = pat.fullmatch(file.stem)
+        if not m:
+            raise ValueError(f"Filename does not match expected pattern xy_<x>_<y>: {file.stem}")
+
+        x_ref = float(m.group(1))
+        y_ref = float(m.group(2))
+
         df = pd.read_csv(file, header=None)
-        if df.shape[1] != 3:
-            raise ValueError("Expected 5 columns")
-        df.columns = ["x_measured", "y_measured", "z"]
+        if df.shape[1] < 2:
+            raise ValueError("Expected at least 2 columns: x_mean, y_mean")
 
-        # Convert from meters to millimeters
-        df[["x_measured", "y_measured"]] *= 1000
+        x_meas = float(df.iloc[0, 0])
+        y_meas = float(df.iloc[0, 1])
 
-        # Mean and standard deviation of measured points
-        x_mean = df["x_measured"].mean()
-        y_mean = df["y_measured"].mean()
-        x_std = df["x_measured"].std()
-        y_std = df["y_measured"].std()
+        dx = x_meas - x_ref
+        dy = y_meas - y_ref
+        err = np.hypot(dx, dy)
+        r_ref = np.hypot(x_ref, y_ref)
 
-        mean_points.append((x_mean, y_mean, x_std, y_std))
+        records.append({
+            "file": file.name,
+            "x_ref": x_ref,
+            "y_ref": y_ref,
+            "x_meas": x_meas,
+            "y_meas": y_meas,
+            "dx": dx,
+            "dy": dy,
+            "error": err,
+            "r_ref": r_ref,
+        })
+
     except Exception as e:
         print(f"[WARNING] Skipped {file.name}: {e}")
 
+if not records:
+    print("No valid files parsed.")
+    exit()
 
-# === Compute global center to shift to (0, 0) ===
-all_x, all_y, all_x_std, all_y_std = zip(*mean_points)
-x_ref = all_x[0]  # First point’s measured x
-y_ref = all_y[0]  # First point’s measured y
+df_all = pd.DataFrame(records)
 
-x_shifted = [0]  # First point stays at origin
-y_shifted = [0]
+# === Print individual errors (same vibe as your nearest-neighbor printout) ===
+print("\nErrors between measured and filename reference points:")
+for i, row in df_all.reset_index(drop=True).iterrows():
+    print(
+        f"Point {i+1:2d}: Error = {row['error']:.4f} mm | "
+        f"Measured = [{row['x_meas']:.4f}, {row['y_meas']:.4f}], "
+        f"Ref = [{row['x_ref']:.4f}, {row['y_ref']:.4f}] | "
+        f"dx = {row['dx']:.4f}, dy = {row['dy']:.4f}"
+    )
 
-# === Center measured points around the mean ===
-x_shifted = [x - np.mean(all_x) for x in all_x]
-y_shifted = [y - np.mean(all_y) for y in all_y]
+# === Summary statistics (kept like your old block) ===
+errors = df_all["error"].to_numpy()
 
-
-x_stds = list(all_x_std)
-y_stds = list(all_y_std)
-
-
-# === Create reference dots at r = 1, 2, 3, 4 mm in 8 directions + origin ===
-radii = [1, 2, 3, 4]  # in mm
-angles_deg = [0, 45, 90, 135, 180, 225, 270, 315]
-angles_rad = np.deg2rad(angles_deg)
-
-ref_x = [0]  # Include origin
-ref_y = [0]
-for r in radii:
-    for angle in angles_rad:
-        ref_x.append(r * np.cos(angle))
-        ref_y.append(r * np.sin(angle))
-
-
-# Assume x_shifted, y_shifted, ref_x, ref_y are defined as in your current script
-
-fig, ax = plt.subplots(figsize=(6, 6))
-ax.set_aspect("equal")
-
-# === Plot measured points and reference dots ===
-scatter_measured = ax.scatter(x_shifted, y_shifted, color="blue", label="Mean Measured Points", s=10)
-scatter_reference = ax.scatter(ref_x, ref_y, color="red", label="Reference Grid", s=5, zorder=3)
-
-
-
-for x, y, x_err, y_err in zip(x_shifted, y_shifted, x_stds, y_stds):
-    ax.errorbar(x, y, xerr=2*x_err, yerr=2*y_err, fmt='none', ecolor='black', alpha=0.6, capsize=1, zorder=4)
-
-# Add legend
-ax.legend(loc="upper right", frameon=True)
-
-# === Draw axis lines at x=0 and y=0 ===
-ax.axhline(0, color='black', linewidth=1)
-ax.axvline(0, color='black', linewidth=1)
-
-# Convert to numpy arrays
-measured_points = np.column_stack((x_shifted, y_shifted))    # blue
-reference_points = np.column_stack((ref_x, ref_y))           # red
-
-# Build KD-tree for fast nearest-neighbor search
-ref_tree = cKDTree(reference_points)
-
-# For each measured point, find the closest reference point
-distances, indices = ref_tree.query(measured_points)
-
-# Now 'distances' holds the error for each measured point
-# 'indices' gives which reference point was closest
-
-# Print individual errors
-print("\nNearest-neighbor errors between measured and reference points:")
-for i, (d, idx) in enumerate(zip(distances, indices)):
-    ref_pt = reference_points[idx]
-    meas_pt = measured_points[i]
-    print(f"Point {i+1:2d}: Error = {d:.4f} mm | Measured = {meas_pt}, Closest Ref = {ref_pt}")
-
-# Summary
 print("\nSummary statistics:")
-print(f"  Mean error:     {np.mean(distances):.4f} mm")
-print(f"  Max error:      {np.max(distances):.4f} mm")
-print(f"  Std deviation:  {np.std(distances):.4f} mm")
+print(f"  Mean error:     {np.mean(errors):.4f} mm")
+print(f"  Max error:      {np.max(errors):.4f} mm")
+print(f"  Std deviation:  {np.std(errors):.4f} mm")  # (not per-file SD—across points)
 
-# === Mean error per radial mm ===
-# Get radius of each matched reference point
-ref_radii = np.linalg.norm(reference_points[indices], axis=1)
+# === Mean error per radial mm (error / radius), excluding r=0 ===
+nonzero = df_all["r_ref"].to_numpy() > 0
+normalized_errors = df_all.loc[nonzero, "error"].to_numpy() / df_all.loc[nonzero, "r_ref"].to_numpy()
 
-# Avoid division by zero for r=0 (we'll exclude it from this analysis)
-nonzero = ref_radii > 0
-normalized_errors = distances[nonzero] / ref_radii[nonzero]
+if normalized_errors.size:
+    mean_relative_error = np.mean(normalized_errors)
+    print(f"\nThe error for each mm is approximately {mean_relative_error:.4f} mm/mm")
+else:
+    print("\nNo nonzero-radius reference points; cannot compute mm/mm normalization.")
 
-mean_relative_error = np.mean(normalized_errors)
+# === Compute per-radius mean error (rounded radius like your old script) ===
+radius_errors = {}
+for r in [0, 1, 2, 3, 4]:
+    radius_errors[r] = []
 
-print(f"\nThe error for each mm is approximately {mean_relative_error:.4f} mm/mm")
+for _, row in df_all.iterrows():
+    r_bucket = round(row["r_ref"])
+    if r_bucket in radius_errors:
+        radius_errors[r_bucket].append(row["error"])
 
-# === Compute per-radius mean error ===
-# First get the radius of each reference point
-ref_radii = np.linalg.norm(reference_points, axis=1)
-
-# Dictionary to accumulate errors per rounded radius (to nearest integer)
-radius_errors = {r: [] for r in [0, 1, 2, 3, 4]}
-
-for d, idx in zip(distances, indices):
-    r = round(ref_radii[idx])  # round to nearest integer mm
-    if r in radius_errors:
-        radius_errors[r].append(d)
-
-# Print average error per radius
 print("\nError by reference radius:")
 for r in sorted(radius_errors):
     errs = radius_errors[r]
@@ -169,23 +131,83 @@ for r in sorted(radius_errors):
         mean_err = np.mean(errs)
         print(f"  Radius {r} mm: Error = {mean_err:.4f} mm")
     else:
-        print(f"  Radius {r} mm: No matched points")
+        print(f"  Radius {r} mm: No points")
 
+# =========================
+# Plot (same background image steps; only ref + measured points)
+# =========================
+fig, ax = plt.subplots(figsize=(6, 6))
+ax.set_aspect("equal")
 
-# === Draw concentric circles at r = 1, 2, 3, 4 mm ===
-for r in [1, 2, 3, 4]:
-    circle = plt.Circle((0, 0), r, color='gray', fill=False, linestyle='--', linewidth=0.8)
-    ax.add_artist(circle)
+# === Display the image underneath (UNCHANGED) ===
+ax.imshow(eye_img, extent=img_extent, alpha=image_opacity, zorder=0)
 
-# === Set axis limits ===
+# Reference points (from filenames)
+ax.scatter(
+    df_all["x_ref"], df_all["y_ref"],
+    color="red", label="Reference Points", s=12, zorder=3
+)
+
+# Measured points (from CSV means)
+ax.scatter(
+    df_all["x_meas"], df_all["y_meas"],
+    color="blue", label="Mean Measured Points", s=12, zorder=4
+)
+
+# Legend
+ax.legend(loc="upper right", frameon=True)
+
+# === Set axis limits (same as before) ===
 max_radius = 4.5
 ax.set_xlim(-max_radius, max_radius)
 ax.set_ylim(-max_radius, max_radius)
 
-# === Display the image underneath ===
-ax.imshow(eye_img, extent=img_extent, alpha=image_opacity, zorder=0)
+from matplotlib.patches import Circle
 
-# === Axis formatting ===
+from matplotlib.patches import Circle
+
+# =========================
+# Polar-style overlay: light grey spokes + circles
+# =========================
+
+overlay_color = "grey"   # or try "#d3d3d3"
+overlay_alpha = 0.6
+overlay_lw = 0.8
+
+# Radii to draw circles at
+reference_radii = [1, 2, 3, 4]
+
+# --- Concentric circles ---
+for r in reference_radii:
+    ax.add_patch(
+        Circle(
+            (0, 0), r,
+            fill=False,
+            edgecolor=overlay_color,
+            linewidth=overlay_lw,
+            linestyle="--",
+            alpha=overlay_alpha,
+            zorder=1
+        )
+    )
+
+# --- Spokes from origin (x, y, diagonals) ---
+spoke_angles_deg = [0, 45, 90, 135, 180, 225, 270, 315]
+R = max_radius  # uses your existing max_radius
+
+for ang in spoke_angles_deg:
+    theta = np.deg2rad(ang)
+    ax.plot(
+        [0, R * np.cos(theta)],
+        [0, R * np.sin(theta)],
+        linestyle="--",
+        color=overlay_color,
+        linewidth=overlay_lw,
+        alpha=overlay_alpha,
+        zorder=1
+    )
+
+# === Axis formatting (kept from your script) ===
 for spine in ['top', 'right']:
     ax.spines[spine].set_visible(False)
 
@@ -196,8 +218,7 @@ ax.tick_params(axis='both', direction='out', length=4)
 ax.set_xlabel("X distance (mm)", fontsize=14, labelpad=10)
 ax.set_ylabel("Y distance (mm)", fontsize=14, labelpad=10)
 
-ax.set_title(" X-Y Location", fontsize=20)
-
+ax.set_title("Human Eye Accuracy Test in the Axial Direction", fontsize=20)
 ax.grid(False)
 
 plt.tight_layout()

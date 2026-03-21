@@ -10,7 +10,7 @@ from src.eye_tracking.human_interface.zaber_human_interface_dummy import ZaberHu
 
 
 class StereoInterfaceManager:
-    def __init__(self, use_dummy_motor=False):
+    def __init__(self, use_dummy_motor=True):
         self.cameras = DualAlliedVisionCameras()
         self.pupil_detector = PupilDetection()
         self.laser_visualizer = LaserFocusVisualizer()
